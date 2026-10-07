@@ -1,0 +1,607 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>
+<title>แผนที่ร่างกาย 3 มิติ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600&family=Sarabun:wght@400;500;600&family=IBM+Plex+Mono:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+/* Layout: anatomical plate on the left (body figure + layer controls), study notes on the right (info card, quiz, part index). */
+:root {
+  --bg: #E8EFF1;
+  --surface: #F6F9FA;
+  --stage: #FBFDFD;
+  --ink: #12252C;
+  --muted: #556F79;
+  --line: #C6D5DA;
+  --accent: #0B7A85;
+  --accent-soft: #D3EBEE;
+  --on-accent: #FFFFFF;
+  --good: #1F7A4D;
+  --bad: #B3362B;
+  --skin: #EBCDB6;
+  --skin-line: #B58F76;
+  --muscle: #C4503F;
+  --muscle-line: #7C2A20;
+  --bone: #EFE9DA;
+  --bone-line: #8A8165;
+  --grid: #E3ECEE;
+  --f-display: "Prompt", "Sarabun", sans-serif;
+  --f-body: "Sarabun", "Noto Sans Thai", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0B1519; --surface: #12232A; --stage: #0E1D23; --ink: #E3EEF1; --muted: #8EA8B1;
+    --line: #25404A; --accent: #45C1CD; --accent-soft: #15383E; --on-accent: #062226;
+    --good: #5FD39A; --bad: #FF8A7C; --skin: #6E5646; --skin-line: #A58670;
+    --muscle: #CF665A; --muscle-line: #5A1D17; --bone: #CFC8B4; --bone-line: #6F6850; --grid: #14272E;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0B1519; --surface: #12232A; --stage: #0E1D23; --ink: #E3EEF1; --muted: #8EA8B1;
+  --line: #25404A; --accent: #45C1CD; --accent-soft: #15383E; --on-accent: #062226;
+  --good: #5FD39A; --bad: #FF8A7C; --skin: #6E5646; --skin-line: #A58670;
+  --muscle: #CF665A; --muscle-line: #5A1D17; --bone: #CFC8B4; --bone-line: #6F6850; --grid: #14272E;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.6; padding-inline: 16px; padding-block: 16px 40px; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1180px; margin-inline: auto; display: flex; flex-direction: column; gap: 16px; }
+
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+h1 { font-family: var(--f-display); font-weight: 600; font-size: clamp(26px, 5vw, 38px); line-height: 1.15; margin: 0; letter-spacing: 0; text-wrap: balance; }
+.sub { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.sub i { font-family: var(--f-mono); font-size: 12.5px; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; padding: 7px 18px; border-radius: 8px; font-weight: 500; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+
+.app { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (min-width: 920px) { .app { grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); } }
+
+.plate { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; border-bottom: 1px solid var(--line); }
+.bar .gap { flex: 1 1 8px; }
+.chip { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: var(--stage); border-radius: 999px; padding: 5px 13px; font-size: 14px; font-weight: 500; }
+.chip .dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(0,0,0,.25); }
+.chip[aria-pressed="false"] { color: var(--muted); }
+.chip[aria-pressed="false"] .dot { opacity: .25; }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.tool { border: 1px solid var(--line); background: var(--stage); border-radius: 8px; padding: 5px 13px; font-size: 14px; font-weight: 500; }
+.tool[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.tool.solid { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+.stage { position: relative; background: var(--stage); background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 24px 24px; }
+#fig { display: block; width: 100%; height: auto; max-height: 82vh; margin-inline: auto; touch-action: manipulation; }
+.hint { position: absolute; left: 12px; bottom: 10px; font-size: 12.5px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 2px 9px; pointer-events: none; }
+.tip { position: absolute; z-index: 3; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 13px; padding: 3px 9px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -140%); opacity: 0; transition: opacity .12s; }
+.tip.on { opacity: 1; }
+
+/* 3D stage */
+.stage { position: relative; background: radial-gradient(ellipse at 50% 38%, var(--stage) 0%, var(--surface) 78%); }
+#gl { display: block; width: 100%; height: clamp(440px, 76vh, 780px); touch-action: none; cursor: grab; outline-offset: -3px; }
+#gl:active { cursor: grabbing; }
+.hint { position: absolute; left: 12px; bottom: 10px; max-width: calc(100% - 24px); font-size: 12.5px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 2px 9px; pointer-events: none; }
+.tip { position: absolute; z-index: 3; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 13px; padding: 3px 9px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -150%); opacity: 0; transition: opacity .12s; }
+.tip.on { opacity: 1; }
+[hidden] { display: none !important; }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 10px; color: var(--muted); background: var(--stage); text-align: center; padding: 16px; z-index: 4; }
+.loading progress { width: min(260px, 70%); accent-color: var(--accent); }
+.views { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; border-top: 1px solid var(--line); align-items: center; }
+.views .lab { font-size: 12.5px; color: var(--muted); margin-inline-end: 2px; }
+.views .gap { flex: 1 1 8px; }
+.note { font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+.side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; min-width: 0; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.tag { font-size: 12.5px; padding: 1px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--ink); border: 1px solid var(--line); }
+.card h2 { font-family: var(--f-display); font-weight: 600; font-size: 24px; line-height: 1.25; margin: 0; }
+.latin { font-family: var(--f-mono); font-style: italic; font-size: 13px; color: var(--muted); margin: 2px 0 10px; }
+.card h3 { font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 14px 0 4px; font-weight: 600; }
+.card p { margin: 0; max-width: 62ch; }
+.tipbox { margin-top: 12px; padding: 10px 12px; background: var(--accent-soft); border-radius: 8px; font-size: 14px; }
+.empty { color: var(--muted); }
+.empty b { color: var(--ink); }
+
+.search { width: 100%; background: var(--stage); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+.systems { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.sys { border: 1px solid var(--line); background: var(--stage); border-radius: 6px; padding: 2px 10px; font-size: 13px; color: var(--muted); }
+.sys[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.list { max-height: 340px; overflow-y: auto; border-top: 1px solid var(--line); }
+.lh { position: sticky; top: 0; background: var(--surface); font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .06em; padding: 8px 0 4px; text-transform: uppercase; }
+.item { display: flex; justify-content: space-between; gap: 10px; width: 100%; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--line); padding: 7px 4px; }
+.item:hover { background: var(--accent-soft); }
+.item[aria-current="true"] { background: var(--accent-soft); font-weight: 600; }
+.item span:last-child { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); text-align: right; }
+
+.q-opt { display: block; width: 100%; text-align: left; margin-top: 8px; padding: 9px 12px; border: 1px solid var(--line); background: var(--stage); border-radius: 8px; }
+.q-opt:hover:not(:disabled) { border-color: var(--accent); }
+.q-opt.ok { border-color: var(--good); background: var(--accent-soft); }
+.q-opt.no { border-color: var(--bad); }
+.q-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.score { font-family: var(--f-mono); font-size: 13px; color: var(--muted); }
+.link { background: none; border: 0; color: var(--accent); text-decoration: underline; padding: 0; }
+.foot { color: var(--muted); font-size: 12.5px; }
+
+/* figure additions */
+.sh { transition: transform .8s cubic-bezier(.2,.8,.2,1); }
+.ov, .dc { pointer-events: none; }
+.dc { fill: none; stroke: currentColor; stroke-width: 1; opacity: .55; }
+.dc.f { fill: currentColor; stroke: none; opacity: .5; }
+.part.qt .shape { stroke: var(--accent); stroke-width: 2; filter: drop-shadow(0 0 4px var(--accent)); animation: pulse 1s ease-in-out infinite; }
+.xray .layer:not(.off) { opacity: .5; }
+.regions { transition: opacity .3s; }
+.regions.hide { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .sh, .regions { transition: none; } .part.qt .shape { animation: none; } }
+
+.credit { position: fixed; right: 12px; bottom: 12px; z-index: 20; display: flex; align-items: center; gap: 8px; max-width: calc(100vw - 24px); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 14px 4px 4px; box-shadow: 0 2px 10px rgba(0,0,0,.12); font-size: 12px; line-height: 1.3; color: var(--ink); opacity: .94; }
+.credit img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); flex: none; }
+.credit small { display: block; color: var(--muted); font-size: 10.5px; }
+.credit b { font-family: var(--f-display); font-weight: 600; font-size: 12.5px; }
+.credit .full { display: none; }
+@media (min-width: 640px) { .credit .full { display: inline; } }
+body { padding-bottom: 76px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>แผนที่ร่างกาย</h1>
+      <p class="sub">กายวิภาคมนุษย์สำหรับติวสอบ · <i>Human Body Atlas</i></p>
+    </div>
+    <p class="sub" style="margin:0;text-align:right">แบบจำลองร่างชายผู้ใหญ่ 3 มิติ<br><span style="font-size:12.5px">ลากเพื่อหมุน เลื่อนล้อหรือบีบนิ้วเพื่อซูม</span></p>
+  </header>
+
+  <div class="app">
+    <section class="plate" aria-label="โมเดลร่างกาย">
+      <div class="bar" id="bar">
+        <button class="chip" type="button" data-layer="skin" aria-pressed="true"><span class="dot" style="background:var(--skin)"></span>ผิวหนัง</button>
+        <button class="chip" type="button" data-layer="muscle" aria-pressed="true"><span class="dot" style="background:var(--muscle)"></span>กล้ามเนื้อ</button>
+        <button class="chip" type="button" data-layer="organ" aria-pressed="true"><span class="dot" style="background:#C86B6B"></span>อวัยวะ</button>
+        <button class="chip" type="button" data-layer="vessel" aria-pressed="false"><span class="dot" style="background:#C42A2F"></span>หลอดเลือด</button>
+        <button class="chip" type="button" data-layer="bone" aria-pressed="true"><span class="dot" style="background:var(--bone)"></span>กระดูก</button>
+        <span class="gap"></span>
+        <button class="tool solid" id="peel" type="button">ปอกชั้นถัดไป</button>
+        <button class="tool" id="xray" type="button" aria-pressed="false">มองทะลุ</button>
+        <button class="tool" id="explode" type="button" aria-pressed="false">แยกชิ้นส่วน</button>
+        <button class="tool" id="isolate" type="button" aria-pressed="false">เน้นชิ้นที่เลือก</button>
+        <button class="tool" id="reset" type="button">รีเซ็ต</button>
+      </div>
+      <div class="stage" id="stage">
+        <canvas id="gl" tabindex="0" role="img" aria-label="แบบจำลองร่างกายมนุษย์ 3 มิติ หมุนดูได้ด้วยการลาก"></canvas>
+        <div class="tip" id="tip"></div>
+        <div class="hint" id="hint">แตะที่ชิ้นส่วนเพื่อดูชื่อและหน้าที่</div>
+        <div class="loading" id="loading"><span id="loadmsg">กำลังโหลดแบบจำลอง 3 มิติ</span><progress id="loadbar" max="100" value="0"></progress></div>
+      </div>
+      <div class="views" id="views" role="group" aria-label="มุมมอง">
+        <span class="lab">มุมมอง</span>
+        <button class="tool" type="button" data-dir="front">หน้า</button>
+        <button class="tool" type="button" data-dir="back">หลัง</button>
+        <button class="tool" type="button" data-dir="left">ซ้าย</button>
+        <button class="tool" type="button" data-dir="right">ขวา</button>
+        <span class="gap"></span>
+        <span class="lab">ซูมไปที่</span>
+        <button class="tool" type="button" data-reg="whole">ทั้งตัว</button>
+        <button class="tool" type="button" data-reg="head">ศีรษะและคอ</button>
+        <button class="tool" type="button" data-reg="chest">ทรวงอก</button>
+        <button class="tool" type="button" data-reg="abdomen">ช่องท้อง</button>
+        <button class="tool" type="button" data-reg="pelvis">อุ้งเชิงกราน</button>
+        <button class="tool" type="button" data-reg="leg">ขา</button>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="card" id="info" aria-live="polite"></div>
+      <div class="card" id="quizcard" hidden></div>
+      <div class="card">
+        <div class="q-row" style="margin-bottom:8px">
+          <strong>ดัชนีชิ้นส่วน</strong>
+          <button class="tool" id="quizbtn" type="button">ทดสอบตัวเอง</button>
+        </div>
+        <input class="search" id="q" type="search" placeholder="ค้นหาชื่อไทยหรืออังกฤษ เช่น ตับ, heart" aria-label="ค้นหาชิ้นส่วน">
+        <div class="systems" id="systems"></div>
+        <div class="list" id="list"></div>
+      </div>
+    </aside>
+  </div>
+  <p class="foot">แบบจำลองเป็นร่างชายผู้ใหญ่ปกติ ขนาดและรูปร่างของแต่ละคนแตกต่างกัน ปอกับตับในแบบจำลองสร้างรูปทรงโดยประมาณจากแนวหลอดลมและหลอดเลือด ไม่มีกล้ามเนื้อหน้าท้องตรง กล้ามเนื้อหลังกว้าง และกล้ามเนื้อใบหน้าหลายมัดในชุดข้อมูลนี้ ใช้ควบคู่กับตำราและแผนภาพมาตรฐานของหลักสูตร</p>
+  <p class="foot">พัฒนาเว็บโดย นายศุภกิตติ์ มูลประสิทธิ์ (อ๊อฟ)</p>
+  <p class="foot">ข้อมูลรูปทรง: BodyParts3D, &copy; The Database Center for Life Science, licensed under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC Attribution 4.0 International</a> (Mitsuhashi et al., 2009) ปรับลดจำนวนรูปหลายเหลี่ยมและจัดกลุ่มจากชุดที่เผยแพร่ในโครงการ <a href="https://github.com/ashemag/human-atlas" target="_blank" rel="noopener">Human Atlas</a> (MIT) คำอธิบายภาษาไทยจัดทำเพิ่มโดยผู้พัฒนา</p>
+  </div>
+<div class="credit" role="note" aria-label="ผู้พัฒนา"><img alt="" src="data:image/jpeg;base64,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"><span><small>สร้างโดย</small><b>อ๊อฟ</b><span class="full"> · นายศุภกิตติ์ มูลประสิทธิ์</span></span></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const INFO={"skin":{"sys":["integ"],"loc":"ห่อหุ้มร่างกายทั้งหมด พื้นที่ผิวผู้ใหญ่ประมาณ 1.5-2 ตารางเมตร คิดเป็นประมาณร้อยละ 15 ของน้ำหนักตัว","fn":"ป้องกันเชื้อโรค รังสียูวี และการสูญเสียน้ำ ควบคุมอุณหภูมิร่างกายด้วยเหงื่อ รับความรู้สึก และสร้างวิตามินดี","more":"มี 3 ชั้น คือ หนังกำพร้า (epidermis) หนังแท้ (dermis) และชั้นใต้ผิวหนัง (hypodermis) เมลานินในหนังกำพร้าช่วยกรองรังสียูวี ต่อมเหงื่อ ต่อมไขมัน รูขุมขน และปลายประสาทรับความรู้สึกอยู่ในหนังแท้","tip":"ผิวหนังเป็นอวัยวะที่ใหญ่ที่สุดของร่างกาย การล้างมือเป็นการลดเชื้อโรคบนผิวหนัง และแสงแดดช่วยสร้างวิตามินดี แต่ควรป้องกันแสงแดดจัดเพื่อลดความเสี่ยงมะเร็งผิวหนัง"},"deltoid":{"sys":["musc"],"loc":"หัวไหล่ คลุมข้อไหล่จากกระดูกไหปลาร้าและสะบักไปยังกระดูกต้นแขน","fn":"ยกแขนออกด้านข้าง (abduction) ส่วนหน้างอแขนไปด้านหน้า ส่วนหลังเหยียดแขนไปด้านหลัง","more":"รับประสาทจาก axillary nerve (C5-C6) กระดูกต้นแขนส่วน surgical neck หักหรือไหล่หลุดอาจทำให้เส้นประสาทนี้เสียหาย","tip":"เป็นตำแหน่งฉีดยาและวัคซีนเข้ากล้ามเนื้อที่พบบ่อยที่สุด (IM injection) ให้ฉีดที่กึ่งกลางมัดประมาณ 2-3 นิ้วมือใต้ปุ่มกระดูกไหล่"},"trapezius":{"sys":["musc"],"loc":"จากท้ายทอยและกระดูกสันหลังไปยังกระดูกสะบักและไหปลาร้า รูปสี่เหลี่ยมคางหมู","fn":"ยกไหล่ หมุนและดึงสะบัก และช่วยเงยหน้า","more":"แบ่งเป็นส่วนบน กลาง ล่าง ส่วนบนยกไหล่ ส่วนกลางดึงสะบักเข้าหากัน ส่วนล่างกดสะบักลง รับประสาทจากเส้นประสาทสมองคู่ที่ 11","tip":"อาการปวดบ่าไหล่จากการนั่งทำงานหน้าจอนานมักเกี่ยวกับส่วนบนของมัดนี้ ควรปรับท่านั่งและยืดเหยียดเป็นระยะ"},"ext_oblique":{"sys":["musc"],"loc":"ด้านข้างหน้าท้อง จากซี่โครงล่าง 8 ซี่ ลงไปยังสันกระดูกเชิงกรานและแนวกลางลำตัว","fn":"หมุนและเอียงลำตัว กดช่องท้อง และช่วยงอลำตัว","more":"ใยกล้ามเนื้อวิ่งเฉียงจากบนนอกลงล่างใน เหมือนมือล้วงกระเป๋ากางเกง ชั้นถัดเข้าไปคือ internal oblique และ transversus abdominis ซึ่งใยวิ่งตามขวาง","tip":"กล้ามเนื้อหน้าท้อง 4 มัด จากนอกสุดเข้าใน คือ external oblique, internal oblique, transversus abdominis และ rectus abdominis ร่วมกันทำหน้าที่ป้องกันและค้ำจุนอวัยวะในช่องท้อง"},"biceps":{"sys":["musc"],"loc":"ต้นแขนด้านหน้า มี 2 หัว (long head และ short head) ไปเกาะที่กระดูกเรเดียส","fn":"งอข้อศอกและหงายแขนท่อนล่าง (supination) เช่น ท่าหมุนไขควงเข้า","more":"รับประสาทจาก musculocutaneous nerve (C5-C6) การเคาะเอ็นไบเซพส์ใช้ตรวจรีเฟลกซ์ระดับ C5-C6","tip":"ไบเซพส์ งอศอก และหงายมือ ส่วนไตรเซพส์ (ด้านหลังต้นแขน) ทำหน้าที่เหยียดข้อศอก เป็นคู่ตรงข้ามกัน"},"adductors":{"sys":["musc"],"loc":"ต้นขาด้านใน จากกระดูกหัวหน่าวไปยังกระดูกต้นขา (femur) ได้แก่ adductor longus, brevis, magnus และ gracilis","fn":"หุบขาเข้าหากัน (adduction) และช่วยรักษาสมดุลขณะเดินและทรงตัว","more":"รับประสาทจาก obturator nerve (L2-L4) การเล่นกีฬาที่ต้องเตะหรือเปลี่ยนทิศทางเร็วทำให้ฉีกขาดได้ง่าย เรียกว่า groin strain","tip":"กล้ามเนื้อกลุ่มนี้ตรงข้ามกับกลุ่มที่กางขา (abductors) ที่สะโพกด้านนอก เช่น gluteus medius"},"sartorius":{"sys":["musc"],"loc":"พาดเฉียงข้ามต้นขาด้านหน้า จากสันกระดูกเชิงกรานด้านหน้าไปยังด้านในของกระดูกหน้าแข้ง","fn":"งอสะโพกและเข่า พร้อมหมุนต้นขาออกด้านนอก เหมือนท่านั่งไขว่ห้าง","more":"เป็นกล้ามเนื้อที่ยาวที่สุดในร่างกาย รับประสาทจาก femoral nerve","tip":"ชื่อมาจากภาษาละติน sartor แปลว่าช่างตัดเสื้อ เพราะช่างตัดเสื้อสมัยก่อนนั่งขัดสมาธิ"},"quadriceps":{"sys":["musc"],"loc":"ต้นขาด้านหน้า 4 หัว คือ rectus femoris, vastus lateralis, vastus medialis และ vastus intermedius รวมเป็นเอ็นเดียวผ่านกระดูกสะบ้า","fn":"เหยียดเข่า เช่น ตอนยืนขึ้น เตะบอล และเดินขึ้นบันได","more":"รับประสาทจาก femoral nerve (L2-L4) เป็นกลุ่มกล้ามเนื้อที่ใหญ่และแข็งแรงที่สุดในร่างกาย การเคาะเอ็นใต้สะบ้า (patellar tendon) ใช้ตรวจรีเฟลกซ์เข่า ระดับ L3-L4","tip":"ผู้สูงอายุควรบริหารกล้ามเนื้อกลุ่มนี้ เพื่อป้องกันการหกล้ม เพราะช่วยพยุงตัวขณะลุกนั่ง"},"gastrocnemius":{"sys":["musc"],"loc":"น่อง จากด้านหลังกระดูกต้นขาเหนือเข่า (2 หัว) รวมกับกล้ามเนื้อ soleus เป็นเอ็นร้อยหวาย (Achilles tendon) เกาะที่ส้นเท้า","fn":"เขย่งปลายเท้าลง (plantar flexion) และช่วยงอเข่า ใช้ในการเดิน วิ่ง และกระโดด","more":"รับประสาทจาก tibial nerve (S1-S2) เป็นกลุ่มกล้ามเนื้อที่ช่วยบีบเลือดดำที่ขากลับขึ้นสู่หัวใจ (calf muscle pump)","tip":"การนั่งหรือยืนนิ่งนาน ๆ ทำให้เลือดคั่งที่ขา เสี่ยงลิ่มเลือดอุดตัน (DVT) ควรขยับขาและเดินเป็นระยะ"},"scm":{"sys":["musc"],"loc":"ด้านข้างคอ จากกระดูกกกหู (mastoid) ลงมายังกระดูกอกและกระดูกไหปลาร้า","fn":"หมุนและเอียงศีรษะ ก้มคอเมื่อทำงานทั้ง 2 ข้าง และช่วยยกซี่โครงตอนหายใจเข้าลึก","more":"ข้างเดียวทำงาน จะเอียงศีรษะเข้าข้างเดียวกันและหมุนหน้าไปด้านตรงข้าม ควบคุมโดยเส้นประสาทสมองคู่ที่ 11 (accessory nerve)","tip":"ใช้เป็นแนวสังเกตสามเหลี่ยมคอ (anterior และ posterior triangle) และจับชีพจรคอ carotid pulse ใกล้ขอบด้านหน้าของมัดนี้"},"brain":{"sys":["nerv"],"loc":"อยู่ในกะโหลกศีรษะ ห่อหุ้มด้วยเยื่อหุ้มสมอง 3 ชั้น (meninges)","fn":"ศูนย์กลางควบคุมการทำงานของร่างกาย ทั้งความคิด ความจำ อารมณ์ การรับความรู้สึก และการเคลื่อนไหว","more":"สมองใหญ่ (cerebrum) แบ่งเป็น 4 กลีบ คือ frontal, parietal, temporal และ occipital สมองน้อย (cerebellum) ควบคุมการทรงตัวและการประสานงานของกล้ามเนื้อ ก้านสมอง (brainstem) ควบคุมการหายใจและการเต้นของหัวใจ","tip":"สมองซีกซ้ายควบคุมร่างกายซีกขวา และสมองซีกขวาควบคุมซีกซ้าย เพราะเส้นประสาทไขว้กันที่ก้านสมอง"},"clavicle":{"sys":["skel"],"loc":"พาดอยู่ด้านหน้าของไหล่ ต่อระหว่างกระดูกอกกับกระดูกสะบัก","fn":"ค้ำยันไหล่ให้ห่างจากลำตัว ถ่ายแรงจากแขนสู่แกนลำตัว และปกป้องเส้นเลือดและเส้นประสาทที่ไปเลี้ยงแขน","more":"เป็นกระดูกแรกที่เริ่มแข็งตัวในทารกในครรภ์ และเป็นกระดูกที่หักบ่อยมาก มักหักบริเวณ 1 ใน 3 ส่วนกลาง จากการล้มเอามือหรือไหล่กระแทกพื้น","tip":"ไหปลาร้าเชื่อมกับกระดูกอกที่ข้อต่อ sternoclavicular ซึ่งเป็นจุดเดียวที่กระดูกแขนยึดกับโครงกระดูกแกนลำตัวโดยตรง"},"sternum":{"sys":["skel"],"loc":"กลางทรวงอกด้านหน้า แบ่งเป็น 3 ส่วน คือ manubrium, body และ xiphoid process","fn":"ปกป้องหัวใจและเส้นเลือดใหญ่ และเป็นจุดเกาะของกระดูกซี่โครงอ่อนและกระดูกไหปลาร้า","more":"กระดูกซี่โครงคู่ที่ 1-7 เชื่อมกับกระดูกอกโดยตรงผ่านกระดูกอ่อน ไขกระดูกในกระดูกอกใช้เป็นแหล่งเจาะตรวจไขกระดูก (sternal bone marrow aspiration) ได้","tip":"การกดหน้าอกช่วยฟื้นคืนชีพ (CPR) กดที่ครึ่งล่างของกระดูกอก ลึกประมาณ 5-6 เซนติเมตร ความเร็ว 100-120 ครั้งต่อนาที"},"ribs":{"sys":["skel","resp"],"loc":"ล้อมรอบทรวงอก 12 คู่ จากกระดูกสันหลังด้านหลังมาเชื่อมกับกระดูกอกด้านหน้า","fn":"ปกป้องปอด หัวใจ ตับ และม้าม และช่วยในการหายใจโดยยกขึ้นลงตามกล้ามเนื้อระหว่างซี่โครง","more":"ซี่โครงแท้ (true ribs) คู่ที่ 1-7 เชื่อมกระดูกอกโดยตรง ซี่โครงเทียม (false ribs) คู่ที่ 8-10 ต่อเข้ากับกระดูกอ่อนของซี่ที่อยู่เหนือขึ้นไป ซี่โครงลอย (floating ribs) คู่ที่ 11-12 ปลายไม่ยึดติดด้านหน้า","tip":"ซี่โครงที่หักบ่อยคือคู่ 5-9 เสี่ยงทิ่มปอดทำให้เกิดภาวะลมในช่องปอด (pneumothorax) ผู้สูบบุหรี่และผู้สูงอายุกระดูกเปราะ หักง่ายกว่า"},"humerus":{"sys":["skel"],"loc":"ต้นแขน จากข้อไหล่ (ต่อกับสะบัก) ถึงข้อศอก","fn":"รับน้ำหนักและส่งแรงของแขนท่อนบน เป็นจุดเกาะของกล้ามเนื้อไหล่และแขน และเป็นส่วนหนึ่งของข้อไหล่และข้อศอก","more":"เป็นกระดูกยาว ปลายบนเป็นหัวกลมเข้ากับเบ้าสะบักเป็นข้อต่อชนิดลูกกลมในเบ้า (ball-and-socket) ซึ่งเคลื่อนไหวได้หลายทิศทางที่สุดแต่หลุดง่าย ร่องกลางกระดูก (radial groove) มีเส้นประสาท radial พาดผ่าน","tip":"กระดูกต้นแขนส่วนกลางหักอาจทำลายเส้นประสาท radial ทำให้เกิดข้อมือตก (wrist drop) ส่วนคอกระดูก (surgical neck) หักเสี่ยงต่อ axillary nerve"},"femur":{"sys":["skel"],"loc":"ต้นขา จากเบ้าสะโพกถึงข้อเข่า","fn":"รับและส่งน้ำหนักตัว เป็นจุดเกาะของกล้ามเนื้อขาหลายมัด","more":"เป็นกระดูกที่ยาวและแข็งแรงที่สุดในร่างกาย ความยาวประมาณหนึ่งในสี่ของส่วนสูง หัวกระดูกกลมเข้ากับเบ้าสะโพก (acetabulum) เป็นข้อต่อชนิดลูกกลมในเบ้า","tip":"ผู้สูงอายุที่กระดูกพรุนมักหักที่คอกระดูกต้นขา (femoral neck) ป้องกันได้ด้วยแคลเซียม วิตามินดี การออกกำลังกายแบบลงน้ำหนัก และจัดบ้านไม่ให้ลื่นล้ม"},"patella":{"sys":["skel"],"loc":"หน้าข้อเข่า อยู่ในเอ็นของกล้ามเนื้อต้นขาด้านหน้า","fn":"ปกป้องข้อเข่าและเพิ่มแรงงัดของกล้ามเนื้อต้นขาด้านหน้าเวลาเหยียดเข่า","more":"เป็นกระดูกเซซามอยด์ (sesamoid bone) ที่ใหญ่ที่สุดในร่างกาย คือกระดูกที่เกิดอยู่ในเส้นเอ็น","tip":"อาการปวดรอบสะบ้าพบบ่อยในนักวิ่งและผู้ที่ขึ้นลงบันไดมาก และสะบ้าเคลื่อนมักหลุดออกด้านนอก"},"tibia":{"sys":["skel"],"loc":"ขาท่อนล่างด้านใน จากข้อเข่าถึงข้อเท้า คลำได้ใต้ผิวหนังที่สันหน้าแข้ง","fn":"รับน้ำหนักเกือบทั้งหมดของร่างกายที่ส่งผ่านจากกระดูกต้นขา","more":"ปลายล่างด้านในเป็นตาตุ่มใน (medial malleolus) ซึ่งเป็นส่วนหนึ่งของข้อเท้า","tip":"กระดูกหน้าแข้งหักพบบ่อยเพราะมีเนื้อเยื่อปกคลุมน้อย และเป็นกระดูกยาวที่หักแบบเปิด (open fracture) ได้บ่อยที่สุด"},"fibula":{"sys":["skel"],"loc":"ขาท่อนล่างด้านนอก ขนานกับกระดูกหน้าแข้ง","fn":"เป็นจุดเกาะของกล้ามเนื้อและช่วยให้ข้อเท้ามั่นคง รับน้ำหนักเพียงเล็กน้อย","more":"ปลายล่างเป็นตาตุ่มนอก (lateral malleolus) เส้นประสาท common fibular พาดผ่านรอบคอของกระดูกน่องใกล้ผิวหนัง","tip":"เส้นประสาทนี้ถูกกดง่ายเมื่อนั่งไขว่ห้างนาน ๆ หรือใส่เฝือกรัดแน่น ทำให้เกิดเท้าตก (foot drop) ได้"},"trachea":{"sys":["resp"],"loc":"ต่อจากกล่องเสียงลงมาแยกเป็นหลอดลมใหญ่ซ้ายและขวา (ที่ระดับกระดูกสันหลังทรวงอกชิ้นที่ 4-5)","fn":"เป็นทางผ่านของอากาศจากกล่องเสียงเข้าสู่ปอด และกรองฝุ่นละอองด้วยเมือกและขนกวัด (cilia)","more":"ยาวประมาณ 10-12 เซนติเมตร มีวงกระดูกอ่อนรูปตัว C ประมาณ 16-20 วง ช่วยให้ท่อเปิดอยู่ตลอดเวลา ส่วนที่ขาดของตัว C หันไปทางหลอดอาหารด้านหลัง","tip":"หลอดลมใหญ่ข้างขวาสั้น กว้าง และตั้งชันกว่าข้างซ้าย สิ่งแปลกปลอมที่สำลักจึงมักตกเข้าปอดข้างขวา"},"esophagus":{"sys":["dig"],"loc":"อยู่หลังหลอดลม ทะลุกระบังลมที่ระดับกระดูกสันหลังทรวงอกชิ้นที่ 10 แล้วต่อกับกระเพาะอาหาร","fn":"ลำเลียงอาหารจากคอหอยลงสู่กระเพาะอาหารด้วยการบีบตัวเป็นลูกคลื่น (peristalsis)","more":"ยาวประมาณ 25 เซนติเมตร ผนังชั้นบนเป็นกล้ามเนื้อลาย ชั้นล่างเป็นกล้ามเนื้อเรียบ ปลายล่างมีหูรูด (lower esophageal sphincter) ป้องกันกรดย้อนขึ้นมา","tip":"หูรูดหลอดอาหารส่วนล่างหย่อนทำให้เกิดกรดไหลย้อน (GERD) ไม่ได้เกี่ยวกับการย่อยในหลอดอาหาร เพราะหลอดอาหารไม่มีน้ำย่อย"},"lungs":{"sys":["resp"],"loc":"อยู่ในช่องทรวงอกทั้ง 2 ข้าง หุ้มด้วยเยื่อหุ้มปอด (pleura) วางบนกระบังลม","fn":"แลกเปลี่ยนก๊าซ รับออกซิเจนเข้าสู่เลือดและกำจัดคาร์บอนไดออกไซด์ออกจากเลือดที่ถุงลม (alveoli)","more":"มีถุงลมประมาณ 300 ล้านถุง ผนังบางมากและมีเส้นเลือดฝอยล้อมรอบ สารลดแรงตึงผิว (surfactant) ช่วยไม่ให้ถุงลมแฟบ","tip":"ปอดขวามี 3 กลีบ ปอดซ้ายมี 2 กลีบ เพราะต้องเว้นที่ให้หัวใจ (รอยเว้า cardiac notch) จำว่า ขวา 3 ซ้าย 2","note":"รูปทรงปอกับตับในโมเดลนี้สร้างขึ้นจากแนวหลอดลมและหลอดเลือดภายในอวัยวะ เป็นรูปทรงโดยประมาณ ไม่ใช่การสแกนพื้นผิวจริง"},"heart":{"sys":["circ"],"loc":"อยู่ในช่องกลางอก (mediastinum) เยื้องไปทางซ้ายเล็กน้อย ปลายหัวใจ (apex) ชี้ลงล่างซ้าย","fn":"สูบฉีดเลือดไปเลี้ยงปอดและทั่วร่างกายตลอดเวลา","more":"มี 4 ห้อง คือ เอเทรียมขวา-ซ้าย และเวนทริเคิลขวา-ซ้าย มีลิ้นหัวใจ 4 ลิ้น (tricuspid, pulmonary, mitral, aortic) ผู้ใหญ่ปกติหัวใจเต้น 60-100 ครั้งต่อนาที","tip":"หัวใจซีกขวารับเลือดดำส่งไปปอด ซีกซ้ายรับเลือดแดงจากปอดส่งไปทั้งตัว ห้องล่างซ้ายมีผนังหนาที่สุดเพราะต้องดันเลือดไปทั่วร่างกาย"},"aorta":{"sys":["circ"],"loc":"ออกจากห้องล่างซ้ายของหัวใจ โค้งผ่านขั้วปอด (aortic arch) แล้วทอดลงไปตามแนวกระดูกสันหลัง แยกเป็นหลอดเลือดแดงที่ขาที่ระดับ L4","fn":"ลำเลียงเลือดที่มีออกซิเจนสูงจากหัวใจไปยังทุกส่วนของร่างกาย","more":"ส่วนโค้ง (arch) แตกแขนงไปเลี้ยงแขนและศีรษะ ได้แก่ brachiocephalic, left common carotid และ left subclavian ส่วนที่ลงช่องท้องแตกแขนงไปเลี้ยงตับ ม้าม กระเพาะอาหาร ลำไส้และไต","tip":"เป็นหลอดเลือดแดงที่ใหญ่ที่สุดของร่างกาย ผนังหนาและยืดหยุ่น ความดันโลหิตสูงเรื้อรังเสี่ยงให้ผนังโป่งพอง (aortic aneurysm)"},"diaphragm":{"sys":["resp","musc"],"loc":"แผ่นกล้ามเนื้อรูปโดมคั่นระหว่างช่องอกกับช่องท้อง","fn":"กล้ามเนื้อหลักของการหายใจ หดตัวลงเมื่อหายใจเข้า และคลายตัวขึ้นเมื่อหายใจออก","more":"เมื่อหายใจเข้า กระบังลมหดตัวแบนลง ปริมาตรช่องอกเพิ่ม ความดันในช่องอกลดลง อากาศจึงไหลเข้าปอด ควบคุมโดยเส้นประสาทเฟรนิก (phrenic nerve) จากไขสันหลังระดับคอ C3-C5","tip":"จำว่า C3, 4, 5 keeps the diaphragm alive การสะอึกเกิดจากกระบังลมหดเกร็งเป็นจังหวะโดยไม่ตั้งใจ"},"liver":{"sys":["dig"],"loc":"ช่องท้องด้านขวาบน ใต้กระบังลม (right hypochondrium) ใหญ่ที่สุดในบรรดาอวัยวะภายใน","fn":"สร้างน้ำดีช่วยย่อยไขมัน เก็บสะสมไกลโคเจน สังเคราะห์โปรตีนในเลือด และทำลายสารพิษและยา","more":"หนักประมาณ 1.2-1.5 กิโลกรัม สร้างอัลบูมินและปัจจัยการแข็งตัวของเลือด เปลี่ยนแอมโมเนียเป็นยูเรีย เก็บวิตามิน A, D, B12, K และธาตุเหล็ก ฟื้นฟูตัวเองได้ดีหลังบาดเจ็บ","tip":"ไวรัสตับอักเสบ A ติดต่อทางอาหารและน้ำ ส่วน B และ C ติดต่อทางเลือดและสารคัดหลั่ง บี ซี ป้องกันได้ด้วยวัคซีนเฉพาะ B","note":"รูปทรงปอกับตับในโมเดลนี้สร้างขึ้นจากแนวหลอดลมและหลอดเลือดภายในอวัยวะ เป็นรูปทรงโดยประมาณ ไม่ใช่การสแกนพื้นผิวจริง"},"gallbladder":{"sys":["dig"],"loc":"ติดอยู่ใต้ตับกลีบขวา","fn":"เก็บและทำให้น้ำดีเข้มข้น แล้วปล่อยเข้าสู่ลำไส้เล็กส่วนต้นเมื่อมีไขมันในอาหาร","more":"ฮอร์โมน CCK (cholecystokinin) จากลำไส้เล็กกระตุ้นให้ถุงน้ำดีบีบตัว น้ำดีไม่มีเอนไซม์ แต่ทำให้ไขมันแตกเป็นหยดเล็ก (emulsification) เอนไซม์ไลเปสจึงย่อยได้ง่ายขึ้น","tip":"ผู้ที่ตัดถุงน้ำดีออกยังมีชีวิตปกติได้ เพราะตับยังสร้างน้ำดีต่อ เพียงแต่ควรลดอาหารไขมันสูง"},"stomach":{"sys":["dig"],"loc":"ช่องท้องด้านซ้ายบน ต่อจากหลอดอาหาร ปลายล่างเป็นหูรูดไพโลรัส (pylorus) ต่อกับลำไส้เล็กส่วนต้น","fn":"เก็บอาหาร คลุกเคล้า และเริ่มย่อยโปรตีนด้วยกรดไฮโดรคลอริกและเอนไซม์เปปซิน","more":"จุได้ประมาณ 1-1.5 ลิตร เมือกที่เคลือบผนังป้องกันกรดทำลายกระเพาะเอง เซลล์ในกระเพาะสร้าง intrinsic factor ซึ่งจำเป็นต่อการดูดซึมวิตามิน B12 ส่วนประกอบคือ cardia, fundus, body และ pylorus","tip":"แบคทีเรีย Helicobacter pylori เป็นสาเหตุสำคัญของแผลในกระเพาะอาหาร ส่วนการย่อยคาร์โบไฮเดรตเริ่มที่ปากด้วยน้ำลาย"},"spleen":{"sys":["imm","circ"],"loc":"ช่องท้องด้านซ้ายบน หลังกระเพาะอาหาร ใกล้ซี่โครงล่าง","fn":"กรองเลือด ทำลายเม็ดเลือดแดงที่หมดอายุ และเป็นแหล่งสร้างเซลล์ภูมิคุ้มกัน","more":"เม็ดเลือดแดงมีอายุประมาณ 120 วัน เมื่อแก่แล้วถูกทำลายที่ม้าม ม้ามเก็บสำรองเกล็ดเลือดและเซลล์เม็ดเลือดขาวชนิดลิมโฟไซต์ไว้ด้วย","tip":"ม้ามแตกง่ายเมื่อถูกกระแทกที่ชายโครงซ้าย และผู้ที่ตัดม้ามออกมีความเสี่ยงติดเชื้อรุนแรงมากขึ้น จึงต้องได้รับวัคซีนเพิ่ม"},"pancreas":{"sys":["dig","endo"],"loc":"อยู่หลังกระเพาะอาหาร พาดขวางช่องท้องส่วนบน หัวตับอ่อนโอบลำไส้เล็กส่วนต้น","fn":"หลั่งเอนไซม์ย่อยอาหารและสร้างฮอร์โมนควบคุมระดับน้ำตาลในเลือด","more":"ส่วนที่มีท่อ (exocrine) หลั่งอะไมเลส ไลเปส ทริปซิน และไบคาร์บอเนต เข้าลำไส้เล็กส่วนต้น ส่วนไร้ท่อ (กลุ่มเซลล์ islets of Langerhans) สร้างอินซูลินจากเบตาเซลล์ (ลดน้ำตาลในเลือด) และกลูคากอนจากอัลฟาเซลล์ (เพิ่มน้ำตาลในเลือด)","tip":"เป็นเบาหวานชนิดที่ 1 เมื่อร่างกายสร้างอินซูลินไม่ได้ ส่วนชนิดที่ 2 เกิดจากเซลล์ดื้อต่ออินซูลิน ซึ่งสัมพันธ์กับน้ำหนักเกินและการขาดการออกกำลังกาย"},"kidneys":{"sys":["uri"],"loc":"อยู่หลังเยื่อบุช่องท้อง ข้างกระดูกสันหลังระดับ T12-L3 ไตขวาต่ำกว่าไตซ้ายเล็กน้อยเพราะตับดันอยู่","fn":"กรองเลือดเพื่อสร้างปัสสาวะ กำจัดของเสีย และรักษาสมดุลน้ำ เกลือแร่ และกรด-ด่างในร่างกาย","more":"แต่ละข้างมีหน่วยไต (nephron) ประมาณ 1 ล้านหน่วย ไตหลั่ง renin ควบคุมความดันโลหิต สร้าง erythropoietin กระตุ้นไขกระดูกสร้างเม็ดเลือดแดง และเปลี่ยนวิตามินดีให้อยู่ในรูปที่ใช้งานได้","tip":"โรคไตเรื้อรังมักเป็นผลจากเบาหวานและความดันโลหิตสูง ควรควบคุมโรคเหล่านี้และลดอาหารเค็มเพื่อชะลอไตเสื่อม"},"prostate":{"sys":["rep"],"loc":"อยู่ใต้กระเพาะปัสสาวะ โอบท่อปัสสาวะส่วนต้น","fn":"สร้างของเหลวที่เป็นส่วนประกอบของน้ำอสุจิ ช่วยหล่อเลี้ยงและเพิ่มการเคลื่อนที่ของอสุจิ","more":"มีขนาดประมาณลูกวอลนัท สร้างของเหลวประมาณ 20-30 เปอร์เซ็นต์ของน้ำอสุจิ ส่วนที่เหลือมาจาก seminal vesicle เป็นหลัก","tip":"ผู้สูงอายุมักมีต่อมลูกหมากโต (BPH) บีบท่อปัสสาวะ ทำให้ปัสสาวะลำบาก ปัสสาวะบ่อยตอนกลางคืน ควรไปพบแพทย์ตรวจคัดกรอง"},"testes":{"sys":["rep"],"loc":"อยู่ในถุงอัณฑะ (scrotum) ห้อยอยู่นอกช่องท้อง","fn":"สร้างอสุจิในหลอดสร้างอสุจิ (seminiferous tubules) และสร้างฮอร์โมนเทสโทสเตอโรน","more":"อสุจิถูกเก็บให้สุกที่ท่อพักอสุจิ (epididymis) ก่อนเดินทางผ่านท่อนำอสุจิ (vas deferens) การสร้างอสุจิต้องอยู่ในอุณหภูมิต่ำกว่าร่างกายประมาณ 2-3 องศาเซลเซียส","tip":"การผูกท่อนำอสุจิ (vasectomy) เป็นวิธีคุมกำเนิดถาวรของชาย ไม่ได้ตัดอัณฑะ จึงไม่กระทบฮอร์โมนเพศ"},"pectoralis_major":{"sys":["musc"],"loc":"หน้าอก จากกระดูกอก ไหปลาร้า และกระดูกซี่โครงอ่อน ไปยังกระดูกต้นแขน","fn":"หุบแขนเข้าหาลำตัว หมุนแขนเข้าด้านใน และงอแขนไปด้านหน้า","more":"รับประสาทจาก medial และ lateral pectoral nerves เต้านมของหญิงวางอยู่บนกล้ามเนื้อมัดนี้","tip":"ท่าวิดพื้น (push-up) และท่าดันอก ใช้กล้ามเนื้อมัดนี้เป็นหลัก"},"serratus_ant":{"sys":["musc"],"loc":"ด้านข้างทรวงอก จากซี่โครง 8-9 ซี่แรก ไปยังขอบในของกระดูกสะบัก มีลักษณะเป็นหยักคล้ายฟันเลื่อย","fn":"ดึงสะบักไปด้านหน้าและยึดสะบักให้แนบกับกรงซี่โครง ช่วยยกแขนเหนือศีรษะ","more":"รับประสาทจาก long thoracic nerve (C5-C7) มักเรียกว่ากล้ามเนื้อนักมวย (boxer muscle) เพราะใช้ในท่าชกไปข้างหน้า","tip":"หากเส้นประสาท long thoracic เสียหาย (เช่นหลังผ่าตัดเต้านม) สะบักจะโผล่ออกมาเหมือนปีก เรียกว่า winged scapula"},"forearm_flexors":{"sys":["musc"],"loc":"ปลายแขนด้านหน้า (ด้านฝ่ามือ) จากปุ่มกระดูกข้อศอกด้านใน ไปยังข้อมือและนิ้วมือ","fn":"งอข้อมือและนิ้วมือ ช่วยในการกำและจับสิ่งของ","more":"รับประสาทจาก median nerve และ ulnar nerve เส้นเอ็นผ่านอุโมงค์ข้อมือ (carpal tunnel) ร่วมกับเส้นประสาทมีเดียน","tip":"โรคอุโมงค์ข้อมือ (carpal tunnel syndrome) เกิดจากเส้นประสาทมีเดียนถูกกด พบในผู้ที่ใช้มือซ้ำ ๆ เช่น พิมพ์งานหรือคอมพิวเตอร์ ทำให้ชาที่นิ้วโป้ง นิ้วชี้ นิ้วกลาง"},"tibialis_ant":{"sys":["musc"],"loc":"ด้านหน้าของหน้าแข้ง ข้างสันกระดูกหน้าแข้ง (tibia) ไปเกาะที่ฝ่าเท้าด้านใน","fn":"กระดกข้อเท้าขึ้น (dorsiflexion) และพลิกเท้าเข้าด้านใน (inversion)","more":"รับประสาทจาก deep fibular nerve ช่วยยกปลายเท้าไม่ให้ลากพื้นขณะก้าวเดิน","tip":"หากเส้นประสาทเสียหายจะเกิดอาการเท้าตก (foot drop) เดินต้องยกเข่าสูงเพื่อไม่ให้ปลายเท้าลาก"},"large_int":{"sys":["dig"],"loc":"ล้อมรอบลำไส้เล็กเป็นกรอบ เริ่มจากซีกัมด้านขวาล่าง ขึ้นทางขวา ขวางช่องท้อง ลงทางซ้าย และจบที่ทวารหนัก","fn":"ดูดซึมน้ำและเกลือแร่กลับ สร้างอุจจาระ และเป็นที่อยู่ของจุลินทรีย์ประจำถิ่น","more":"ยาวประมาณ 1.5 เมตร ประกอบด้วย cecum, ascending, transverse, descending, sigmoid colon, rectum และ anal canal ไส้ติ่ง (appendix) ติดอยู่ที่ cecum จุลินทรีย์ในลำไส้ใหญ่สร้างวิตามิน K และวิตามิน B บางชนิด","tip":"ไส้ติ่งอักเสบมักเริ่มปวดรอบสะดือแล้วย้ายไปปวดท้องน้อยด้านขวาล่าง (จุด McBurney) ท้องเสียรุนแรงทำให้สูญเสียน้ำและเกลือแร่ ต้องให้สารละลายเกลือแร่ ORS"},"small_int":{"sys":["dig"],"loc":"ขดอยู่กลางช่องท้อง ต่อจากกระเพาะอาหาร แบ่งเป็น duodenum, jejunum และ ileum","fn":"ย่อยอาหารขั้นสุดท้ายและดูดซึมสารอาหารเกือบทั้งหมดเข้าสู่กระแสเลือดและน้ำเหลือง","more":"ยาวประมาณ 6-7 เมตรในศพ ผนังด้านในมีวิลไล (villi) และไมโครวิลไล เพิ่มพื้นที่ผิวให้ดูดซึมได้มาก ลำไส้เล็กส่วนปลาย (ileum) ดูดซึมวิตามิน B12 และเกลือน้ำดี","tip":"จำลำดับ 3 ส่วนว่า D-J-I (ดูโอดีนัม, เจจูนัม, อีเลียม) ไขมันถูกดูดซึมเข้าท่อน้ำเหลือง (lacteal) ส่วนน้ำตาลและกรดอะมิโนเข้าเส้นเลือดฝอย"},"hip_bone":{"sys":["skel"],"loc":"ฐานของลำตัวส่วนล่าง ประกอบด้วยกระดูกสะโพก 2 ข้าง (แต่ละข้างมี ilium, ischium และ pubis) กับกระดูกกระเบนเหน็บและก้นกบ","fn":"รับน้ำหนักตัวส่งต่อไปยังขา ปกป้องอวัยวะในอุ้งเชิงกราน และเป็นเบ้าสะโพก (acetabulum) รับหัวกระดูกต้นขา","more":"กระดูกเชิงกรานของหญิงกว้างและตื้นกว่า ช่องเปิดด้านบน (pelvic inlet) กลมกว่า และมุมใต้กระดูกหัวหน่าว (subpubic angle) กว้างกว่า 90 องศา เหมาะกับการคลอด ของชายแคบและลึกกว่า มุมน้อยกว่า 90 องศา","tip":"กระดูกเชิงกรานเป็นส่วนที่ใช้บอกเพศจากโครงกระดูกได้แม่นยำที่สุด และหากช่องเชิงกรานแคบเมื่อเทียบกับศีรษะทารก (CPD) อาจต้องผ่าตัดคลอด"},"hand_bones":{"sys":["skel"],"loc":"ปลายสุดของแขน ต่อจากข้อมือ","fn":"ให้ความคล่องแคล่วในการหยิบจับ กำ และใช้เครื่องมือ","more":"มีทั้งหมด 27 ชิ้น คือ กระดูกข้อมือ (carpals) 8 ชิ้น กระดูกฝ่ามือ (metacarpals) 5 ชิ้น และกระดูกนิ้ว (phalanges) 14 ชิ้น","tip":"กระดูกสแคฟฟอยด์ (scaphoid) ในกระดูกข้อมือหักบ่อยจากการล้ม แต่เห็นไม่ชัดในเอกซเรย์แรก และเลือดมาเลี้ยงน้อย จึงหายช้าหรือตายได้"},"foot_bones":{"sys":["skel"],"loc":"ปลายสุดของขา ต่อจากข้อเท้า","fn":"รับน้ำหนักตัว ดูดซับแรงกระแทก และผลักตัวเมื่อเดินหรือวิ่ง","more":"มี 26 ชิ้น คือ กระดูกข้อเท้า (tarsals) 7 ชิ้น กระดูกฝ่าเท้า (metatarsals) 5 ชิ้น และกระดูกนิ้วเท้า (phalanges) 14 ชิ้น กระดูกส้นเท้า (calcaneus) ใหญ่ที่สุด จัดเป็นอุ้งเท้า (arch) ช่วยรับแรง","tip":"โรคเท้าแบน (flat foot) คืออุ้งเท้าต่ำหรือหายไป ผู้เป็นเบาหวานต้องดูแลเท้าและตรวจแผลที่เท้าทุกวัน เพราะชาและหายช้า"},"bladder":{"sys":["uri"],"loc":"อยู่ในอุ้งเชิงกราน หลังกระดูกหัวหน่าว ต่อกับท่อปัสสาวะ (urethra)","fn":"เก็บปัสสาวะชั่วคราวก่อนขับออกจากร่างกาย","more":"จุได้ประมาณ 400-600 มิลลิลิตร เริ่มรู้สึกปวดปัสสาวะเมื่อมีปัสสาวะประมาณ 200-300 มิลลิลิตร ผนังเป็นกล้ามเนื้อเรียบ (detrusor) บีบตัวขับปัสสาวะออก","tip":"ท่อปัสสาวะของชายยาวประมาณ 20 เซนติเมตร ส่วนของหญิงสั้นเพียงประมาณ 4 เซนติเมตร หญิงจึงเสี่ยงติดเชื้อทางเดินปัสสาวะ (UTI) มากกว่า"},"pectoralis_minor":{"sys":["musc"],"loc":"อยู่ใต้กล้ามเนื้อหน้าอกมัดใหญ่ จากซี่โครงซี่ที่ 3-5 ไปยังปุ่ม coracoid ของสะบัก","fn":"ดึงสะบักลงและไปด้านหน้า และช่วยยกซี่โครงตอนหายใจเข้าลึกเมื่อสะบักถูกตรึงไว้","more":"","tip":"เส้นประสาทและเส้นเลือดที่ไปแขน (brachial plexus และ axillary artery) ลอดผ่านใต้กล้ามเนื้อมัดนี้ ถ้าตึงมากอาจกดทับทำให้ชาแขน (pectoralis minor syndrome)"},"intercostals":{"sys":["musc","resp"],"loc":"ช่องว่างระหว่างกระดูกซี่โครงแต่ละคู่ มี 3 ชั้น คือ external, internal และ innermost intercostal","fn":"ยกและลดซี่โครงขณะหายใจ external ช่วยหายใจเข้า internal ช่วยหายใจออกแรง ๆ","more":"","tip":"เส้นเลือดและเส้นประสาทวิ่งตามขอบล่างของซี่โครง ดังนั้นการเจาะระบายของเหลวในช่องปอดต้องแทงเหนือขอบบนของซี่โครงล่างเพื่อเลี่ยงเส้นเหล่านี้"},"triceps":{"sys":["musc"],"loc":"ต้นแขนด้านหลัง มี 3 หัว (long, lateral, medial) ไปเกาะที่ปุ่ม olecranon ของกระดูกอัลนา รวมกล้ามเนื้อ anconeus ที่ข้อศอก","fn":"เหยียดข้อศอก และหัว long head ช่วยเหยียดและหุบแขนที่ข้อไหล่","more":"รับประสาทจาก radial nerve (C6-C8) เป็นกล้ามเนื้อคู่ตรงข้ามกับไบเซพส์","tip":"การเคาะเอ็นไตรเซพส์ใช้ตรวจรีเฟลกซ์ระดับ C7-C8 ท่าวิดพื้นและท่าดันน้ำหนักใช้กล้ามเนื้อมัดนี้เป็นหลัก"},"brachialis":{"sys":["musc"],"loc":"ต้นแขนด้านหน้า อยู่ใต้ไบเซพส์ เกาะที่กระดูกอัลนา (รวมกล้ามเนื้อ coracobrachialis ใกล้หัวไหล่)","fn":"งอข้อศอกในทุกท่าของแขน เป็นกล้ามเนื้อหลักในการงอข้อศอก","more":"","tip":"บราคิอาลิสทำงานทุกครั้งที่งอข้อศอก ไม่ว่าฝ่ามือจะหงายหรือคว่ำ ต่างจากไบเซพส์ที่ทำงานมากเมื่อฝ่ามือหงาย"},"brachioradialis":{"sys":["musc"],"loc":"ปลายแขนด้านนิ้วหัวแม่มือ จากกระดูกต้นแขนเหนือข้อศอกไปยังปลายกระดูกเรเดียส","fn":"งอข้อศอก โดยเฉพาะเมื่อฝ่ามืออยู่ในท่าครึ่งคว่ำครึ่งหงาย (เช่น ท่ายกแก้วน้ำ)","more":"","tip":"ใช้เคาะตรวจรีเฟลกซ์ brachioradialis ที่ปลายแขนด้านนิ้วโป้ง ระดับ C5-C6"},"forearm_extensors":{"sys":["musc"],"loc":"ปลายแขนด้านหลังมือ จากปุ่มกระดูกต้นแขนด้านนอก (lateral epicondyle) ไปยังข้อมือและนิ้ว","fn":"เหยียดข้อมือและเหยียดนิ้วมือ","more":"รับประสาทจาก radial nerve ประกอบด้วย extensor carpi radialis longus และ brevis, extensor digitorum, extensor carpi ulnaris, extensor pollicis และอื่น ๆ","tip":"โรคเอ็นข้อศอกด้านนอกอักเสบ (tennis elbow) เกิดที่จุดเกาะของกล้ามเนื้อกลุ่มนี้ที่ lateral epicondyle เพราะใช้งานซ้ำ ๆ"},"rotator_cuff":{"sys":["musc"],"loc":"ล้อมหัวกระดูกต้นแขนที่ข้อไหล่ ประกอบด้วย 4 มัด คือ supraspinatus, infraspinatus, teres minor และ subscapularis","fn":"ยึดหัวกระดูกต้นแขนให้อยู่ในเบ้าสะบักและทำให้ไหล่เคลื่อนไหวได้อย่างมั่นคง","more":"supraspinatus ช่วยกางแขนช่วงแรก infraspinatus และ teres minor หมุนแขนออก subscapularis หมุนแขนเข้า","tip":"จำชื่อกลุ่มว่า SITS (Supraspinatus, Infraspinatus, Teres minor, Subscapularis) เอ็น supraspinatus เป็นเอ็นที่ฉีกขาดบ่อยที่สุดของข้อไหล่"},"teres_major":{"sys":["musc"],"loc":"จากมุมล่างของสะบักไปยังกระดูกต้นแขนด้านหน้า","fn":"หุบแขนเข้าลำตัว หมุนแขนเข้า และเหยียดแขนไปด้านหลัง","more":"","tip":"เรียกกันว่า \"แลทิสซิมัสตัวน้อย\" เพราะทำงานร่วมกับกล้ามเนื้อหลังกว้าง (latissimus dorsi)"},"rhomboids":{"sys":["musc"],"loc":"ใต้ทราพีเซียส จากกระดูกสันหลังส่วนคอและอกไปยังขอบในของสะบัก รวมกล้ามเนื้อ levator scapulae","fn":"ดึงสะบักเข้าหากระดูกสันหลัง และ levator scapulae ยกสะบักขึ้น","more":"","tip":"ท่านั่งหลังค่อมทำให้กล้ามเนื้อกลุ่มนี้ยืดและอ่อนแรง ควรฝึกท่าดึงสะบักเข้าหากันเพื่อแก้ไหล่ห่อ"},"scalenes":{"sys":["musc","resp"],"loc":"ด้านข้างคอ จากกระดูกสันหลังส่วนคอไปยังซี่โครงที่ 1 และ 2","fn":"เอียงคอ และยกซี่โครงซี่บนตอนหายใจเข้าลึก (กล้ามเนื้อช่วยหายใจ)","more":"","tip":"เส้นประสาท brachial plexus และหลอดเลือด subclavian artery ลอดผ่านระหว่างสเกลีนส์ กลุ่มอาการ thoracic outlet syndrome เกิดจากการกดทับตรงนี้"},"neck_ant":{"sys":["musc"],"loc":"คอด้านหน้าและใต้คาง ได้แก่ omohyoid, sternohyoid, sternothyroid, thyrohyoid, digastric, mylohyoid, geniohyoid, stylohyoid และ platysma","fn":"ช่วยกลืน พูด อ้าปาก และเคลื่อนกระดูกไฮออยด์กับกล่องเสียง","more":"","tip":"ขณะกลืน กล่องเสียงและกระดูกไฮออยด์ถูกดึงขึ้น ฝาปิดกล่องเสียง (epiglottis) จึงปิดป้องกันอาหารเข้าหลอดลม"},"erector":{"sys":["musc"],"loc":"ตามแนวกระดูกสันหลังด้านหลัง ประกอบด้วย iliocostalis, longissimus และ spinalis","fn":"เหยียดและยืดกระดูกสันหลัง ช่วยให้ลำตัวตั้งตรง และเอียงลำตัวไปด้านข้าง","more":"","tip":"ปวดหลังส่วนล่างจากการยกของผิดท่ามักเกี่ยวกับกล้ามเนื้อกลุ่มนี้ ควรย่อเข่าและยกของใกล้ตัว"},"deep_back":{"sys":["musc"],"loc":"ชั้นลึกใกล้กระดูกสันหลังและฐานกะโหลก ได้แก่ semispinalis, splenius, rotatores, interspinales, intertransversarii, serratus posterior และกล้ามเนื้อใต้ท้ายทอย (suboccipital)","fn":"ควบคุมการเคลื่อนไหวละเอียดของกระดูกสันหลัง ก้ม เงย หมุน และเอียงศีรษะ","more":"","tip":"กล้ามเนื้อใต้ท้ายทอยมีตัวรับความรู้สึกมาก ช่วยรักษาท่าทางและการทรงตัวของศีรษะ ปวดศีรษะจากความเครียดมักเกี่ยวข้องกับกล้ามเนื้อตึงบริเวณนี้"},"psoas_iliacus":{"sys":["musc"],"loc":"จากกระดูกสันหลังส่วนเอวและแอ่งกระดูกเชิงกราน (iliac fossa) ลงไปเกาะที่กระดูกต้นขาด้านใน (lesser trochanter)","fn":"งอข้อสะโพก ยกต้นขาขึ้น และช่วยงอลำตัวไปด้านหน้า","more":"","tip":"เป็นกล้ามเนื้องอสะโพกที่แข็งแรงที่สุด การนั่งนานทำให้ตึงสั้นและดึงให้หลังส่วนล่างแอ่น ควรยืดเหยียดเป็นประจำ"},"gluteus_max":{"sys":["musc"],"loc":"สะโพกด้านหลัง ชั้นนอกสุด จากกระดูกเชิงกรานและกระดูกกระเบนเหน็บไปยังกระดูกต้นขา","fn":"เหยียดสะโพก ช่วยในการลุกยืนจากท่านั่ง ขึ้นบันได และวิ่ง","more":"เป็นกล้ามเนื้อที่ใหญ่ที่สุดในร่างกาย รับประสาทจาก inferior gluteal nerve (L5-S2)","tip":"การฉีดยาที่ก้นต้องฉีดที่ส่วนบนด้านนอกเพื่อเลี่ยงเส้นประสาทไซแอติก (sciatic nerve) ปัจจุบันจึงนิยมฉีดที่ตำแหน่ง ventrogluteal (สะโพกด้านข้าง) ซึ่งปลอดภัยกว่า"},"gluteus_med":{"sys":["musc"],"loc":"สะโพกด้านข้าง ใต้กล้ามเนื้อก้นมัดใหญ่ จากปีกกระดูกเชิงกรานไปยังปุ่มกระดูกต้นขาด้านนอก (greater trochanter)","fn":"กางขาออกด้านข้าง (abduction) และยึดเชิงกรานให้ทรงตัวขณะยืนขาเดียวหรือก้าวเดิน","more":"","tip":"ถ้ากล้ามเนื้อนี้อ่อนแรง เชิงกรานจะตกลงฝั่งตรงข้ามตอนยืนขาเดียว เรียกว่า Trendelenburg sign ผู้ป่วยจึงเดินส่ายสะโพก"},"hip_rotators":{"sys":["musc"],"loc":"ลึกใต้กล้ามเนื้อก้นมัดใหญ่ ได้แก่ piriformis, gemellus superior และ inferior, obturator internus และ externus, quadratus femoris","fn":"หมุนต้นขาออกด้านนอก และช่วยยึดหัวกระดูกต้นขาในเบ้าสะโพก","more":"","tip":"เส้นประสาทไซแอติกลอดผ่านหรือใกล้กล้ามเนื้อ piriformis กล้ามเนื้อนี้ตึงอาจกดเส้นประสาทเกิดอาการปวดร้าวลงขา (piriformis syndrome)"},"tfl_it":{"sys":["musc"],"loc":"สะโพกและต้นขาด้านนอก tensor fasciae latae ต่อกับแถบเอ็นยาว iliotibial tract ลงไปเกาะที่ใต้เข่าด้านนอก","fn":"กางและหมุนต้นขาเข้า และช่วยพยุงเข่าให้มั่นคงขณะยืน","more":"","tip":"กลุ่มอาการ iliotibial band พบบ่อยในนักวิ่ง ทำให้ปวดเข่าด้านนอก"},"hamstrings":{"sys":["musc"],"loc":"ต้นขาด้านหลัง ประกอบด้วย biceps femoris, semitendinosus และ semimembranosus จากกระดูกก้นกบ (ischial tuberosity) ลงไปที่กระดูกหน้าแข้งและน่อง","fn":"เหยียดสะโพกและงอเข่า","more":"รับประสาทจาก sciatic nerve (L5-S2)","tip":"เป็นกล้ามเนื้อที่ฉีกขาดบ่อยในนักกีฬาที่วิ่งเร็ว ควรอบอุ่นร่างกายก่อนออกกำลัง"},"soleus":{"sys":["musc"],"loc":"น่องชั้นลึก อยู่ใต้ gastrocnemius จากกระดูกหน้าแข้งและน่องไปรวมเป็นเอ็นร้อยหวาย","fn":"เขย่งปลายเท้าลง (plantar flexion) และช่วยรักษาท่ายืนตรง","more":"","tip":"โซเลียสเป็นกล้ามเนื้อสำคัญในการปั๊มเลือดดำที่ขากลับสู่หัวใจ (soleal sinus) ช่วยป้องกันลิ่มเลือดในหลอดเลือดดำที่ขา เมื่อเดินทางไกลควรขยับข้อเท้าบ่อย ๆ"},"leg_deep":{"sys":["musc"],"loc":"หน้าแข้งและน่องส่วนอื่น ได้แก่ tibialis posterior, fibularis (peroneus) longus, brevis และ tertius, extensor digitorum longus, extensor hallucis longus, flexor digitorum longus, flexor hallucis longus และ popliteus","fn":"กระดกและกดข้อเท้า พลิกเท้าเข้าออก และงอเหยียดนิ้วเท้า รวมถึง popliteus ช่วยปลดล็อกข้อเข่า","more":"","tip":"ข้อเท้าแพลงพบมากที่สุดคือพลิกเข้าด้านใน (inversion sprain) ที่ทำให้เอ็นด้านนอกเสียหาย กล้ามเนื้อ fibularis ช่วยป้องกัน"},"achilles":{"sys":["musc"],"loc":"ด้านหลังข้อเท้า ต่อจากกล้ามเนื้อน่อง (gastrocnemius และ soleus) ไปเกาะที่กระดูกส้นเท้า","fn":"ส่งแรงจากกล้ามเนื้อน่องเพื่อเขย่งเท้า เดิน วิ่ง และกระโดด","more":"","tip":"เป็นเอ็นที่ใหญ่และแข็งแรงที่สุดของร่างกาย แต่ก็ฉีกขาดได้ง่ายเมื่อออกแรงกะทันหัน การตรวจ Thompson test ใช้บีบน่องดูว่าเท้ากระดกลงหรือไม่"},"foot_muscles":{"sys":["musc"],"loc":"ฝ่าเท้าและหลังเท้า เช่น flexor digitorum brevis, abductor hallucis, flexor hallucis brevis, lumbricals และ interossei","fn":"พยุงอุ้งเท้า ช่วยงอ กาง และหุบนิ้วเท้า ปรับการลงน้ำหนักเมื่อเดิน","more":"","tip":"พังผืดฝ่าเท้าอักเสบ (plantar fasciitis) ทำให้ปวดส้นเท้าเมื่อก้าวแรกตอนเช้า พบมากในผู้ที่ยืนหรือเดินนาน"},"hand_muscles":{"sys":["musc"],"loc":"ฝ่ามือและนิ้วมือ ได้แก่ กล้ามเนื้อนิ้วหัวแม่มือ (thenar) นิ้วก้อย (hypothenar) lumbricals และ interossei","fn":"ควบคุมการเคลื่อนไหวละเอียดของนิ้ว เช่น หยิบ จับ เขียน และงอ กาง หุบนิ้ว","more":"","tip":"กล้ามเนื้อกลุ่มนิ้วโป้งรับประสาท median nerve ถ้ากล้ามเนื้อฝ่อ เป็นสัญญาณของโรคอุโมงค์ข้อมือเรื้อรัง"},"pelvic_floor":{"sys":["musc","uri","rep"],"loc":"ปิดด้านล่างของช่องอุ้งเชิงกราน ได้แก่ levator ani (puborectalis, pubococcygeus, iliococcygeus), coccygeus และหูรูดทวารหนัก","fn":"พยุงอวัยวะในอุ้งเชิงกราน (กระเพาะปัสสาวะ มดลูก ลำไส้ตรง) และควบคุมการกลั้นปัสสาวะและอุจจาระ","more":"","tip":"การคลอดบุตรและการเบ่งเรื้อรังทำให้กล้ามเนื้อกลุ่มนี้อ่อนแรง เกิดภาวะกลั้นปัสสาวะไม่อยู่หรืออวัยวะเชิงกรานหย่อน การออกกำลังแบบ Kegel ช่วยเสริมความแข็งแรง"},"eye_muscles":{"sys":["musc","nerv"],"loc":"ล้อมลูกตาในเบ้าตา มี 6 มัด คือ superior, inferior, medial, lateral rectus และ superior, inferior oblique รวมกล้ามเนื้อยกเปลือกตา (levator palpebrae superioris)","fn":"กลอกลูกตาไปทุกทิศ และยกเปลือกตาบน","more":"รับประสาทสมองคู่ที่ 3 (oculomotor) เป็นส่วนใหญ่ ยกเว้น lateral rectus รับคู่ที่ 6 (abducens) และ superior oblique รับคู่ที่ 4 (trochlear)","tip":"จำสูตร LR6 SO4 AO3 คือ lateral rectus = CN VI, superior oblique = CN IV ส่วนที่เหลือ = CN III"},"cranium":{"sys":["skel"],"loc":"ส่วนบนของศีรษะ ประกอบด้วย frontal, parietal 2 ชิ้น, temporal 2 ชิ้น, occipital, sphenoid และ ethmoid","fn":"ปกป้องสมอง และเป็นโครงสร้างให้เยื่อหุ้มสมองและกล้ามเนื้อบางมัดเกาะ","more":"กระดูกกะโหลก 8 ชิ้นเชื่อมกันด้วยรอยต่อ (suture) ทารกแรกเกิดมีขม่อม (fontanelle) ที่ยังไม่ปิด ขม่อมหน้าปิดเมื่ออายุประมาณ 12-18 เดือน","tip":"บริเวณ pterion ด้านข้างศีรษะเป็นจุดที่กระดูกบางที่สุด ถ้าถูกกระแทกแรงอาจทำให้หลอดเลือดแดงเยื่อหุ้มสมองฉีก เกิดเลือดออกเหนือเยื่อดูรา (epidural hematoma)"},"facial_bones":{"sys":["skel"],"loc":"ใบหน้า ได้แก่ maxilla, zygomatic, nasal, palatine, vomer และอื่น ๆ","fn":"เป็นโครงของใบหน้า เบ้าตา โพรงจมูก และเพดานปาก รองรับฟันบน","more":"","tip":"โพรงอากาศข้างจมูก (sinuses) อยู่ในกระดูกใบหน้า ติดเชื้อทำให้เกิดไซนัสอักเสบ ปวดแน่นใบหน้า"},"mandible":{"sys":["skel"],"loc":"กรามล่าง ต่อกับกะโหลกที่ข้อต่อขากรรไกร (temporomandibular joint)","fn":"เคี้ยวอาหาร พูด และรองรับฟันล่าง","more":"","tip":"เป็นกระดูกเดียวของศีรษะที่ขยับได้ ข้อต่อขากรรไกรเสื่อมหรืออักเสบ (TMJ disorder) ทำให้อ้าปากแล้วมีเสียงหรือปวด"},"teeth":{"sys":["dig","skel"],"loc":"ฝังอยู่ในกระดูกขากรรไกรบนและล่าง ผู้ใหญ่มีฟันแท้ 32 ซี่","fn":"กัด ตัด และบดอาหารให้เป็นชิ้นเล็ก เป็นการย่อยเชิงกลขั้นแรก","more":"ชนิดของฟัน ได้แก่ ฟันตัด (incisor) ฟันเขี้ยว (canine) ฟันกรามน้อย (premolar) และฟันกราม (molar) เคลือบฟัน (enamel) แข็งที่สุดในร่างกาย","tip":"ฟันผุเกิดจากแบคทีเรียย่อยน้ำตาลเป็นกรด การแปรงฟันด้วยยาสีฟันผสมฟลูออไรด์และลดน้ำตาลช่วยป้องกัน เป็นงานส่งเสริมสุขภาพช่องปากที่สำคัญ"},"larynx":{"sys":["resp","skel"],"loc":"ลำคอ ต่อระหว่างคอหอยกับหลอดลม ประกอบด้วยกระดูกไฮออยด์ (hyoid) และกระดูกอ่อน thyroid, cricoid, arytenoid, corniculate, cuneiform","fn":"ปกป้องทางเดินหายใจขณะกลืน และเป็นแหล่งสร้างเสียงด้วยเส้นเสียง (vocal cords)","more":"","tip":"กระดูกอ่อน thyroid cartilage ที่เห็นเป็นลูกกระเดือก (Adam apple) ในผู้ชายชัดกว่า การเปิดทางเดินหายใจฉุกเฉิน cricothyrotomy ทำที่เยื่อ cricothyroid ใต้ลูกกระเดือก"},"cervical_v":{"sys":["skel","nerv"],"loc":"กระดูกสันหลังส่วนคอ 7 ชิ้น (C1-C7) C1 เรียก atlas, C2 เรียก axis","fn":"พยุงศีรษะ ให้ศีรษะก้ม เงย หมุน และเป็นทางผ่านของไขสันหลัง และหลอดเลือดแดง vertebral ไปสมอง","more":"","tip":"Atlas ต่อกับกะโหลก ทำให้พยักหน้าได้ Axis มีปุ่ม dens ให้ atlas หมุน ทำให้ส่ายหน้าได้ การบาดเจ็บที่ C3-C5 เสี่ยงกระทบประสาทที่ควบคุมกระบังลม"},"thoracic_v":{"sys":["skel","nerv"],"loc":"กระดูกสันหลังส่วนอก 12 ชิ้น (T1-T12) เชื่อมกับซี่โครงทั้งสองข้าง","fn":"ค้ำจุนลำตัวส่วนบน เป็นจุดต่อของซี่โครงเพื่อสร้างกรงทรวงอก ป้องกันไขสันหลัง","more":"","tip":"ภาวะหลังโกง (kyphosis) และกระดูกสันหลังคด (scoliosis) พบที่ช่วงอก ผู้สูงอายุที่กระดูกพรุนเสี่ยงยุบตัวของกระดูกสันหลังส่วนนี้"},"lumbar_v":{"sys":["skel","nerv"],"loc":"กระดูกสันหลังส่วนเอว 5 ชิ้น (L1-L5) ใหญ่และหนาที่สุด","fn":"รับน้ำหนักลำตัวส่วนบนมากที่สุด และให้ความยืดหยุ่นในการก้มเงย","more":"","tip":"ไขสันหลังจบที่ระดับ L1-L2 การเจาะน้ำไขสันหลัง (lumbar puncture) จึงทำที่ระหว่าง L3-L4 หรือ L4-L5 เพื่อไม่ให้ทำอันตรายไขสันหลัง"},"sacrum":{"sys":["skel"],"loc":"ฐานของกระดูกสันหลัง เกิดจากกระดูกสันหลัง 5 ชิ้นเชื่อมติดกัน ต่อกับกระดูกสะโพกที่ข้อ sacroiliac","fn":"ส่งน้ำหนักลำตัวไปยังกระดูกเชิงกราน และปกป้องเส้นประสาทส่วนล่าง","more":"","tip":"ของหญิงกว้างและสั้นกว่าของชาย ช่วยให้ช่องเชิงกรานกว้างขึ้นสำหรับการคลอด"},"discs":{"sys":["skel"],"loc":"คั่นระหว่างกระดูกสันหลังแต่ละชิ้น (ยกเว้นระหว่าง C1-C2)","fn":"ดูดซับแรงกระแทก และให้กระดูกสันหลังขยับได้","more":"ประกอบด้วยวงนอกที่เป็นเส้นใยกระดูกอ่อน (annulus fibrosus) และแกนกลางนิ่ม (nucleus pulposus)","tip":"หมอนรองกระดูกปลิ้นออกไปกดทับเส้นประสาท ทำให้ปวดร้าวลงขา (sciatica) มักเกิดที่ L4-L5 และ L5-S1 ความสูงของหมอนรองลดลงเมื่ออายุมากขึ้น ทำให้ส่วนสูงลดลง"},"costal_cart":{"sys":["skel","resp"],"loc":"ต่อระหว่างปลายซี่โครงด้านหน้ากับกระดูกอก","fn":"ทำให้กรงซี่โครงยืดหยุ่นและขยายตัวได้ขณะหายใจ","more":"","tip":"ในการกดหน้าอก (CPR) ที่ถูกต้อง กระดูกอ่อนซี่โครงช่วยให้ทรวงอกยุบและคืนตัว แต่ผู้สูงอายุกระดูกอ่อนแข็งขึ้นจึงหักง่าย"},"scapula":{"sys":["skel"],"loc":"หลังส่วนบน ด้านหลังของซี่โครง รูปสามเหลี่ยม","fn":"เป็นเบ้าของข้อไหล่ และเป็นจุดเกาะของกล้ามเนื้อไหล่ แขน และหลังหลายมัด","more":"ส่วนที่สำคัญคือ acromion (ยอดไหล่), coracoid process และ glenoid cavity (เบ้าข้อไหล่)","tip":"ข้อไหล่ (glenohumeral joint) เคลื่อนไหวได้มากที่สุดแต่หลุดง่ายที่สุดในร่างกาย"},"radius":{"sys":["skel"],"loc":"ปลายแขนด้านนิ้วหัวแม่มือ ต่อกับกระดูกข้อมือ","fn":"รับน้ำหนักจากมือส่งต่อไปยังแขน และหมุนข้ามกระดูกอัลนาเมื่อคว่ำหรือหงายมือ","more":"","tip":"จับชีพจรที่ข้อมือด้านนิ้วหัวแม่มือ (radial pulse) การหกล้มเอามือยันพื้นมักทำให้ปลายเรเดียสหัก เรียกว่า Colles fracture"},"ulna":{"sys":["skel"],"loc":"ปลายแขนด้านนิ้วก้อย ปลายบนเป็นปุ่มข้อศอก (olecranon)","fn":"เป็นแกนของข้อศอก ทำให้งอเหยียดข้อศอกได้ และเป็นจุดเกาะของกล้ามเนื้อไตรเซพส์","more":"","tip":"ปุ่มข้อศอกที่คลำได้ด้านหลังข้อศอกคือ olecranon เส้นประสาท ulnar ผ่านใกล้ ทำให้ชาแปลบเมื่อกระแทกข้อศอก (funny bone)"},"carpals":{"sys":["skel"],"loc":"ข้อมือ 8 ชิ้น เรียงเป็น 2 แถว คือ scaphoid, lunate, triquetral, pisiform และ trapezium, trapezoid, capitate, hamate","fn":"ทำให้ข้อมือเคลื่อนไหวได้หลายทิศทางและส่งแรงจากแขนสู่มือ","more":"","tip":"จำชื่อทั้ง 8 ชิ้นด้วยประโยค Some Lovers Try Positions That They Can Handle กระดูก scaphoid หักบ่อยจากการล้ม และเลือดมาเลี้ยงน้อย จึงหายช้า"},"coronary":{"sys":["circ"],"loc":"ทอดอยู่บนผิวหัวใจ ได้แก่ หลอดเลือดโคโรนารีขวาและซ้าย (LAD และ circumflex) และ coronary sinus","fn":"นำเลือดที่มีออกซิเจนไปเลี้ยงกล้ามเนื้อหัวใจเอง","more":"","tip":"หลอดเลือดโคโรนารีตีบหรืออุดตันทำให้เกิดโรคหลอดเลือดหัวใจ (กล้ามเนื้อหัวใจขาดเลือด) ปัจจัยเสี่ยงที่ป้องกันได้ คือ สูบบุหรี่ ความดันสูง ไขมันสูง เบาหวาน และขาดการออกกำลังกาย"},"arteries":{"sys":["circ"],"loc":"แขนงของ aorta ที่ไปเลี้ยงศีรษะ แขน อวัยวะในช่องท้อง และขา เช่น carotid, subclavian, brachial, radial, femoral, popliteal, renal และ mesenteric","fn":"ลำเลียงเลือดที่มีออกซิเจนจากหัวใจไปเลี้ยงเนื้อเยื่อ ผนังหนาและยืดหยุ่นทนความดันสูง","more":"","tip":"จุดคลำชีพจรที่ใช้บ่อย ได้แก่ carotid (คอ) radial (ข้อมือ) brachial (ต้นแขนด้านใน ใช้วัดความดัน) femoral (ขาหนีบ) และ dorsalis pedis (หลังเท้า) การเจาะเลือดแดงเพื่อตรวจก๊าซมักใช้ radial artery"},"veins":{"sys":["circ"],"loc":"ได้แก่ superior และ inferior vena cava, jugular, subclavian, iliac, femoral, portal และ azygos","fn":"นำเลือดที่ใช้แล้วกลับสู่หัวใจ มีลิ้นกันเลือดไหลย้อนในหลอดเลือดดำที่แขนขา","more":"","tip":"การเจาะเลือดมักเลือกหลอดเลือดดำที่ข้อพับแขน (median cubital vein) ส่วนเส้นเลือดขอดเกิดเมื่อลิ้นในหลอดเลือดดำที่ขาเสียหน้าที่"},"adrenals":{"sys":["endo"],"loc":"อยู่เหนือไตทั้งสองข้าง","fn":"ส่วนนอก (cortex) สร้างคอร์ติซอล อัลโดสเตอโรน และฮอร์โมนเพศ ส่วนใน (medulla) สร้างอะดรีนาลีนและนอร์อะดรีนาลีน","more":"","tip":"อะดรีนาลีนทำให้หัวใจเต้นเร็ว หลอดเลือดหดตัว เตรียมสู้หรือหนี (fight or flight) ส่วนคอร์ติซอลเป็นฮอร์โมนเครียดที่ควบคุมน้ำตาลและการอักเสบ"},"ureters":{"sys":["uri"],"loc":"ท่อยาวประมาณ 25-30 เซนติเมตร จากกรวยไตลงมาเปิดที่กระเพาะปัสสาวะ","fn":"ลำเลียงปัสสาวะจากไตลงสู่กระเพาะปัสสาวะด้วยการบีบตัวเป็นลูกคลื่น","more":"","tip":"นิ่วในท่อไตทำให้ปวดบิดรุนแรงร้าวจากสีข้างลงมาที่ขาหนีบ จุดที่นิ่วมักติดคือจุดที่ท่อไตแคบ 3 จุด คือ รอยต่อกรวยไต ขอบเชิงกราน และจุดเข้ากระเพาะปัสสาวะ"},"penis":{"sys":["rep","uri"],"loc":"อวัยวะเพศชายภายนอก ประกอบด้วย corpus cavernosum 2 แท่งและ corpus spongiosum ที่มีท่อปัสสาวะผ่าน","fn":"ขับปัสสาวะ และนำน้ำอสุจิเข้าสู่ร่างกายของเพศหญิงขณะมีเพศสัมพันธ์","more":"","tip":"การใช้ถุงยางอนามัยทุกครั้งช่วยป้องกันโรคติดต่อทางเพศสัมพันธ์และการตั้งครรภ์ เป็นหัวข้อสำคัญของงานอนามัยเจริญพันธุ์"},"thymus":{"sys":["imm"],"loc":"อยู่หลังกระดูกอก เหนือหัวใจ ใหญ่ที่สุดในวัยเด็กและฝ่อลงเมื่อโตขึ้น","fn":"เป็นแหล่งเจริญและเรียนรู้ของที-ลิมโฟไซต์ (T cells) ที่ใช้ในระบบภูมิคุ้มกัน","more":"","tip":"ตัว T ใน T cell ย่อมาจาก thymus ในผู้ใหญ่ต่อมนี้มีขนาดเล็กลงมาก และถูกแทนที่ด้วยเนื้อเยื่อไขมัน"},"pituitary":{"sys":["endo","nerv"],"loc":"ฐานสมองในโพรงกระดูก sella turcica เชื่อมกับ hypothalamus ด้วยก้านต่อมใต้สมอง","fn":"หลั่งฮอร์โมนควบคุมต่อมไร้ท่ออื่น เช่น GH, TSH, ACTH, FSH, LH, โพรแลกติน รวมทั้ง ADH และออกซิโทซินที่ส่วนหลัง","more":"","tip":"เรียกกันว่า \"ต่อมไร้ท่อหัวหน้า\" (master gland) เพราะสั่งงานต่อมอื่น การขาดฮอร์โมนการเจริญเติบโตในเด็กทำให้ตัวเตี้ย และเกินทำให้ตัวสูงผิดปกติ"},"cerebellum":{"sys":["nerv"],"loc":"ใต้สมองใหญ่ ด้านหลังก้านสมอง ที่ฐานท้ายทอย","fn":"ควบคุมการทรงตัว การประสานงานของกล้ามเนื้อ และการเคลื่อนไหวอย่างราบรื่น","more":"","tip":"การบาดเจ็บของสมองน้อยทำให้เดินเซ มือสั่นเมื่อเอื้อมหยิบ และพูดไม่ชัด (ataxia) พบในผู้ที่ดื่มแอลกอฮอล์มากเพราะแอลกอฮอล์กดการทำงานของสมองน้อย"},"brainstem":{"sys":["nerv"],"loc":"ต่อจากสมองใหญ่ลงมายังไขสันหลัง ประกอบด้วย midbrain, pons และ medulla oblongata","fn":"ควบคุมการทำงานที่จำเป็นต่อชีวิต เช่น การหายใจ การเต้นของหัวใจ ความดันโลหิต และการตื่น-หลับ และเป็นทางผ่านของเส้นประสาทไปมา","more":"","tip":"ภาวะสมองตาย (brain death) หมายถึงก้านสมองหยุดทำงานอย่างถาวร ผู้ป่วยไม่หายใจเองและไม่มีรีเฟลกซ์ของก้านสมอง"}};
+/* ===== แผนที่ร่างกาย 3 มิติ ===== */
+(function () {
+  const $ = id => document.getElementById(id);
+  const SYS = {
+    nerv: 'ระบบประสาท', endo: 'ระบบต่อมไร้ท่อ', resp: 'ระบบหายใจ', circ: 'ระบบไหลเวียนเลือด',
+    dig: 'ระบบย่อยอาหาร', uri: 'ระบบขับถ่ายปัสสาวะ', rep: 'ระบบสืบพันธุ์', musc: 'ระบบกล้ามเนื้อ',
+    skel: 'ระบบโครงกระดูก', integ: 'ระบบผิวหนัง', imm: 'ระบบน้ำเหลืองและภูมิคุ้มกัน'
+  };
+  const LAYER_TH = { skin: 'ผิวหนัง', muscle: 'กล้ามเนื้อ', organ: 'อวัยวะภายใน', vessel: 'หลอดเลือด', bone: 'กระดูก' };
+  const ORDER = ['skin', 'muscle', 'organ', 'vessel', 'bone'];      /* นอกสุด -> ในสุด */
+  const INIT = { skin: false, muscle: false, organ: true, vessel: false, bone: true };
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  const canvas = $('gl'), stage = $('stage'), tip = $('tip'), info = $('info'), list = $('list');
+  const qinput = $('q'), systemsEl = $('systems'), quizcard = $('quizcard'), peelBtn = $('peel');
+
+  if (!window.THREE || !THREE.OrbitControls) {
+    $('loadmsg').textContent = 'โหลดไลบรารี 3 มิติไม่สำเร็จ ตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองรีเฟรชหน้า';
+    $('loadbar').hidden = true; return;
+  }
+
+  /* ---------- สถานะ ---------- */
+  let vis = Object.assign({}, INIT), xray = false, isolate = false, sysFilter = null;
+  let sel = 'liver', hover = null, quiz = null, exploded = false, explodeT = 0, explodeTarget = 0;
+  let items = [], byId = {}, bodyLo = [0, 0, 0], bodyHi = [0, 1.75, 0], H = 1.75, midY = .9;
+  const meshes = [];
+
+  /* ---------- ฉาก ---------- */
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setClearColor(0x000000, 0);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(28, 1, 0.05, 40);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x6d7b86, 0.95));
+  const key = new THREE.DirectionalLight(0xffffff, 0.85); scene.add(key);
+  const fill = new THREE.DirectionalLight(0xdfeaff, 0.35); scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xffffff, 0.3); scene.add(rim);
+  const controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true; controls.dampingFactor = 0.12; controls.screenSpacePanning = true;
+  controls.minDistance = 0.3; controls.maxDistance = 7; controls.rotateSpeed = 0.8;
+
+  /* ---------- วนเรนเดอร์เมื่อจำเป็น ---------- */
+  let raf = 0, dirty = true, flight = null, pulseUntil = 0;
+  function invalidate() { dirty = true; if (!raf) raf = requestAnimationFrame(frame); }
+  controls.addEventListener('change', invalidate);
+  function frame(t) {
+    raf = 0;
+    let again = false;
+    if (flight) {
+      const k = Math.min(1, (t - flight.t0) / flight.dur), e = 1 - Math.pow(1 - k, 3);
+      controls.target.lerpVectors(flight.t1, flight.t2, e);
+      camera.position.lerpVectors(flight.p1, flight.p2, e);
+      if (k >= 1) flight = null; else again = true;
+      dirty = true;
+    }
+    if (Math.abs(explodeT - explodeTarget) > 0.001) {
+      explodeT += (explodeTarget - explodeT) * (reduce ? 1 : 0.14); again = true; applyExplode(); dirty = true;
+    } else if (explodeT !== explodeTarget) { explodeT = explodeTarget; applyExplode(); dirty = true; }
+    if (controls.update()) again = true;
+    key.position.copy(camera.position).add(new THREE.Vector3(0.8, 1.2, 0.6));
+    fill.position.copy(camera.position).add(new THREE.Vector3(-1.2, 0.2, 0.4));
+    rim.position.copy(camera.position).add(new THREE.Vector3(0.2, 0.6, -2.5));
+    const pulsing = sel && t < pulseUntil;
+    if (pulsing || hover || (sel && items.length)) pulseMats(t, pulsing);
+    if (pulsing) again = true;
+    if (dirty) { renderer.render(scene, camera); dirty = false; }
+    if (again) invalidate();
+  }
+  function pulseMats(t, pulsing) {
+    items.forEach(it => {
+      let e = 0;
+      if (it.id === sel) e = pulsing ? 0.28 + 0.26 * Math.sin(t / 170) : 0.24;
+      else if (it.id === hover) e = 0.16;
+      else if (quiz && quiz.target === it.id) e = 0.4 + 0.22 * Math.sin(t / 170);
+      if (it.glow !== e) { it.glow = e; it.mat.emissiveIntensity = e; dirty = true; }
+    });
+  }
+  function resize() {
+    const w = stage.clientWidth, h = canvas.clientHeight || 600;
+    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); invalidate();
+  }
+  new ResizeObserver(resize).observe(stage);
+
+  /* ---------- โหลดแบบจำลอง ---------- */
+  async function load() {
+    const man = await (await fetch('model.json')).json();
+    const txt = await (await fetch('model.b64.txt')).text();
+    $('loadbar').value = 80;
+    const raw = atob(txt.trim()), bin = new Uint8Array(raw.length);
+    for (let k = 0; k < raw.length; k++) bin[k] = raw.charCodeAt(k);
+    const buf = bin.buffer;
+    const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+    man.items.forEach((m, i) => {
+      const inf = INFO[m.id] || { sys: [], loc: '', fn: '', tip: '' };
+      const col = new THREE.Color(m.color); if (m.layer === 'bone') col.multiplyScalar(0.86);
+      if (m.layer === 'muscle' && m.color === '#B4483A') {      /* เฉดต่างกันเล็กน้อยให้แยกมัดได้ */
+        const hsl = {}; col.getHSL(hsl); const j = ((i * 37) % 11) / 11 - 0.5;
+        col.setHSL(hsl.h + j * 0.018, hsl.s * (0.92 + 0.1 * Math.abs(j)), hsl.l + j * 0.09);
+      }
+      const mat = new THREE.MeshStandardMaterial({ color: col, roughness: m.layer === 'bone' ? 0.62 : m.layer === 'skin' ? 0.8 : 0.55, metalness: 0, side: THREE.DoubleSide, emissive: new THREE.Color(0x19b8c8), emissiveIntensity: 0 });
+      const it = { id: m.id, layer: m.layer, th: m.th, en: m.en, info: inf, sys: inf.sys || [], mat, pieces: [], glow: 0, lo: [1e9, 1e9, 1e9], hi: [-1e9, -1e9, -1e9] };
+      items.push(it); byId[m.id] = it;
+    });
+    man.pieces.forEach(p => {
+      const it = items[p.i];
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(new Int16Array(buf, p.p, p.nv * 3), 3, false));
+      g.setAttribute('normal', new THREE.BufferAttribute(new Int8Array(buf, p.n, p.nv * 3), 3, true));
+      g.setIndex(new THREE.BufferAttribute(p.b ? new Uint32Array(buf, p.x, p.nt * 3) : new Uint16Array(buf, p.x, p.nt * 3), 1));
+      const mesh = new THREE.Mesh(g, it.mat);
+      mesh.scale.setScalar(p.sc / 32767); mesh.position.set(p.c[0], p.c[1], p.c[2]);
+      mesh.userData = { item: it, base: mesh.position.clone(), off: new THREE.Vector3() };
+      scene.add(mesh); meshes.push(mesh); it.pieces.push(mesh);
+      for (let k = 0; k < 3; k++) { it.lo[k] = Math.min(it.lo[k], p.lo[k]); it.hi[k] = Math.max(it.hi[k], p.hi[k]); lo[k] = Math.min(lo[k], p.lo[k]); hi[k] = Math.max(hi[k], p.hi[k]); }
+    });
+    bodyLo = lo; bodyHi = hi; H = hi[1] - lo[1]; midY = (lo[1] + hi[1]) / 2;
+    /* เวกเตอร์แยกชิ้นส่วน: จากกึ่งกลางลำตัวไปยังกึ่งกลางของแต่ละชิ้น (ผิวหนังอยู่กับที่) */
+    const C = new THREE.Vector3(0, lo[1] + H * 0.58, 0);
+    meshes.forEach(m => {
+      const it = m.userData.item;
+      if (it.layer === 'skin') return;
+      const c = new THREE.Vector3((it.lo[0] + it.hi[0]) / 2, (it.lo[1] + it.hi[1]) / 2, (it.lo[2] + it.hi[2]) / 2);
+      m.geometry.computeBoundingBox();
+      const b = m.geometry.boundingBox, s = m.scale.x;
+      const mc = new THREE.Vector3((b.min.x + b.max.x) / 2 * s + m.position.x, (b.min.y + b.max.y) / 2 * s + m.position.y, (b.min.z + b.max.z) / 2 * s + m.position.z);
+      m.userData.off.copy(mc.sub(C)).multiplyScalar(0.42);
+      m.userData.off.z += it.layer === 'muscle' ? 0.06 : 0;
+    });
+    $('loading').hidden = true;
+  }
+
+  function applyExplode() {
+    meshes.forEach(m => { m.position.copy(m.userData.base).addScaledVector(m.userData.off, explodeT); });
+  }
+
+  /* ---------- ชั้น วัสดุ และเครื่องมือ ---------- */
+  function refresh() {
+    items.forEach(it => {
+      const shown = vis[it.layer];
+      let op = 1;
+      if (xray && (it.layer === 'skin' || it.layer === 'muscle')) op = 0.22;
+      else if (xray) op = 0.7;
+      if (isolate && sel && it.id !== sel) op = Math.min(op, 0.1);
+      if (sysFilter && !it.sys.includes(sysFilter)) op = Math.min(op, 0.1);
+      const tr = op < 0.99;
+      if (it.mat.opacity !== op || it.mat.transparent !== tr) {
+        it.mat.opacity = op; it.mat.transparent = tr; it.mat.depthWrite = !tr || op > 0.5; it.mat.needsUpdate = true;
+      }
+      it.pieces.forEach(m => { m.visible = shown; });
+    });
+    document.querySelectorAll('#bar .chip').forEach(c => c.setAttribute('aria-pressed', !!vis[c.dataset.layer]));
+    const n = ORDER.filter(l => vis[l]).length;
+    peelBtn.textContent = n <= 1 ? 'ใส่ชั้นกลับทั้งหมด' : 'ปอกชั้นถัดไป';
+    $('xray').setAttribute('aria-pressed', xray);
+    $('isolate').setAttribute('aria-pressed', isolate);
+    $('explode').setAttribute('aria-pressed', exploded);
+    systemsEl.querySelectorAll('.sys').forEach(b => b.setAttribute('aria-pressed', (b.dataset.s || '') === (sysFilter || '')));
+    invalidate();
+  }
+  function peel() {
+    const v = ORDER.filter(l => vis[l]);
+    if (v.length <= 1) ORDER.forEach(l => vis[l] = true); else vis[v[0]] = false;
+    refresh();
+  }
+  function reveal(it) {
+    const idx = ORDER.indexOf(it.layer);
+    vis[it.layer] = true;
+    for (let i = 0; i < idx; i++) vis[ORDER[i]] = false;
+    refresh();
+  }
+
+  /* ---------- กล้อง ---------- */
+  const fovTan = Math.tan(camera.fov * Math.PI / 360);
+  function fitDist(h) { return Math.max(0.35, (h / 2) / fovTan * 1.18 / Math.min(1, camera.aspect * 1.25)); }
+  function flyTo(target, dist, dir, dur) {
+    const d = dir ? dir.clone().normalize() : camera.position.clone().sub(controls.target).normalize();
+    const p2 = target.clone().addScaledVector(d, dist);
+    if (reduce) { controls.target.copy(target); camera.position.copy(p2); controls.update(); invalidate(); return; }
+    flight = { t0: performance.now(), dur: dur || 650, t1: controls.target.clone(), t2: target.clone(), p1: camera.position.clone(), p2 };
+    invalidate();
+  }
+  const DIRS = { front: [0, 0.04, 1], back: [0, 0.04, -1], left: [1, 0.04, 0], right: [-1, 0.04, 0] };
+  const REG = {
+    whole: [0.52, 1.0], head: [0.93, 0.2], chest: [0.74, 0.24], abdomen: [0.6, 0.2], pelvis: [0.5, 0.17], leg: [0.27, 0.52]
+  };
+  function region(k) {
+    const [f, hh] = REG[k]; const y = bodyLo[1] + H * f;
+    flyTo(new THREE.Vector3(0, y, 0), fitDist(H * hh * (exploded ? 1.5 : 1)));
+  }
+  function focusItem(it) {
+    const c = new THREE.Vector3((it.lo[0] + it.hi[0]) / 2, (it.lo[1] + it.hi[1]) / 2, (it.lo[2] + it.hi[2]) / 2);
+    const size = Math.max(it.hi[1] - it.lo[1], (it.hi[0] - it.lo[0]) * 0.9, 0.12);
+    if (exploded) { const m = it.pieces[0]; if (m) c.add(m.userData.off.clone().multiplyScalar(explodeT)); }
+    flyTo(c, fitDist(size * 1.5));
+  }
+
+  /* ---------- การ์ดข้อมูล ---------- */
+  function showInfo(it) {
+    if (!it) {
+      info.innerHTML = '<p class="empty"><b>แตะที่ชิ้นส่วนบนแบบจำลอง</b> หรือเลือกจากดัชนีด้านล่าง เพื่อดูชื่อ หน้าที่ และตำแหน่ง ใช้ปุ่มปอกชั้นเพื่อดูลึกเข้าไปในร่างกาย</p>'; return;
+    }
+    const f = it.info, tags = [LAYER_TH[it.layer]].concat(it.sys.map(s => SYS[s]));
+    info.innerHTML =
+      `<div class="tags">${tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>` +
+      `<h2>${it.th}</h2><div class="latin">${it.en}</div>` +
+      `<h3>หน้าที่</h3><p>${f.fn}</p>` +
+      (f.more ? `<h3>รายละเอียด</h3><p>${f.more}</p>` : '') +
+      `<h3>ตำแหน่ง</h3><p>${f.loc}</p>` +
+      `<div class="tipbox"><strong>จุดที่ควรจำ</strong> ${f.tip}</div>` +
+      (f.note ? `<p class="note">${f.note}</p>` : '') +
+      `<div class="q-row" style="margin-top:12px"><button class="tool" id="focusbtn" type="button">เลื่อนกล้องไปที่ชิ้นนี้</button></div>`;
+  }
+  function select(id, o) {
+    o = o || {};
+    const it = byId[id]; if (!it) return;
+    sel = id;
+    if (o.reveal) reveal(it);
+    refresh(); showInfo(it); markList();
+    pulseUntil = performance.now() + 2600; invalidate();
+    if (o.focus) focusItem(it);
+  }
+
+  /* ---------- ดัชนี ---------- */
+  function renderList() {
+    const q = qinput.value.trim().toLowerCase();
+    const arr = items.filter(it => (!sysFilter || it.sys.includes(sysFilter)) &&
+      (!q || (it.th + ' ' + it.en + ' ' + it.sys.map(s => SYS[s]).join(' ')).toLowerCase().includes(q)));
+    let h = '';
+    ['organ', 'vessel', 'muscle', 'bone', 'skin'].forEach(l => {
+      const g = arr.filter(it => it.layer === l); if (!g.length) return;
+      h += `<div class="lh">${LAYER_TH[l]} (${g.length})</div>` +
+        g.map(it => `<button class="item" type="button" data-id="${it.id}"><span>${it.th}</span><span>${it.en.split(' (')[0]}</span></button>`).join('');
+    });
+    list.innerHTML = h || '<p class="empty" style="padding:12px 4px;margin:0">ไม่พบชิ้นส่วนที่ตรงกับคำค้น</p>';
+    markList();
+  }
+  function markList() {
+    list.querySelectorAll('.item').forEach(b => b.setAttribute('aria-current', b.dataset.id === sel ? 'true' : 'false'));
+    const el = list.querySelector('[aria-current="true"]');
+    if (el) {
+      const lr = list.getBoundingClientRect(), ir = el.getBoundingClientRect();
+      if (ir.top < lr.top + 28 || ir.bottom > lr.bottom) list.scrollTop += ir.top - lr.top - lr.height / 2;
+    }
+  }
+  function buildSystems() {
+    const used = Object.keys(SYS).filter(k => items.some(it => it.sys.includes(k)));
+    systemsEl.innerHTML = `<button class="sys" type="button" data-s="" aria-pressed="true">ทุกระบบ</button>` +
+      used.map(k => `<button class="sys" type="button" data-s="${k}" aria-pressed="false">${SYS[k]}</button>`).join('');
+  }
+
+  /* ---------- ทดสอบตัวเอง ---------- */
+  function makeQ(it, pool) {
+    const type = Math.random() < .5 ? 'name' : 'fn';
+    const same = pool.filter(x => x.id !== it.id);
+    const d = shuffle(same.filter(x => x.layer === it.layer)).concat(shuffle(same.filter(x => x.layer !== it.layer))).slice(0, 3);
+    const opts = shuffle([it].concat(d)).map(x => ({ id: x.id, t: type === 'name' ? x.th : x.info.fn }));
+    return { it, type, opts };
+  }
+  function startQuiz() {
+    quiz = { qs: shuffle(items).slice(0, 10).map(it => makeQ(it, items)), i: 0, score: 0, miss: [], target: null };
+    quizcard.hidden = false; $('quizbtn').setAttribute('aria-pressed', 'true'); renderQ();
+    quizcard.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+  }
+  function closeQuiz() { quiz = null; quizcard.hidden = true; $('quizbtn').setAttribute('aria-pressed', 'false'); invalidate(); }
+  function renderQ() {
+    if (quiz.i >= quiz.qs.length) { quiz.target = null; return renderResult(); }
+    const q = quiz.qs[quiz.i], it = q.it;
+    quiz.target = it.id; sel = null; showInfo(null); markList();
+    reveal(it); focusItem(it);
+    const ask = q.type === 'name' ? 'ชิ้นส่วนที่เรืองแสงบนแบบจำลองคืออะไร' : `ข้อใดคือหน้าที่ของ <b>${it.th}</b> (ชิ้นส่วนที่เรืองแสงบนแบบจำลอง)`;
+    quizcard.innerHTML =
+      `<div class="q-row"><strong>ทดสอบตัวเอง</strong><span class="score">ข้อ ${quiz.i + 1}/${quiz.qs.length} · ถูก ${quiz.score}</span></div>` +
+      `<p style="margin-top:8px">${ask}</p>` +
+      q.opts.map((o, i) => `<button class="q-opt" type="button" data-i="${i}">${o.t}</button>`).join('') + `<div id="qfb"></div>`;
+    invalidate();
+  }
+  function answerQ(i) {
+    const q = quiz.qs[quiz.i], ok = q.opts[i].id === q.it.id;
+    quizcard.querySelectorAll('.q-opt').forEach((b, k) => {
+      b.disabled = true;
+      if (q.opts[k].id === q.it.id) b.classList.add('ok'); else if (k === i) b.classList.add('no');
+    });
+    if (ok) quiz.score++; else quiz.miss.push(q.it.id);
+    const last = quiz.i === quiz.qs.length - 1;
+    $('qfb').innerHTML =
+      `<div class="tipbox"><strong>${ok ? 'ถูกต้อง' : 'ยังไม่ถูก'}</strong> ${q.it.th} (${q.it.en.split(' (')[0]}) ${q.it.info.fn}</div>` +
+      `<div class="q-row" style="margin-top:10px"><button class="link" type="button" id="qclose">เลิกทำ</button><button class="tool solid" type="button" id="qnext">${last ? 'ดูผล' : 'ข้อถัดไป'}</button></div>`;
+    $('qnext').focus({ preventScroll: true });
+  }
+  function renderResult() {
+    const n = quiz.qs.length, s = quiz.score;
+    const msg = s === n ? 'ครบทุกข้อ' : s >= n * .7 ? 'ทำได้ดี ทบทวนข้อที่พลาดอีกนิดก็พร้อมสอบ' : 'ลองทบทวนข้อที่พลาด แล้วทำใหม่อีกรอบ';
+    quizcard.innerHTML =
+      `<div class="q-row"><strong>ผลการทดสอบ</strong><span class="score">${s}/${n}</span></div><p style="margin-top:8px">${msg}</p>` +
+      (quiz.miss.length ? `<h3 style="font-size:12.5px;color:var(--muted);margin:12px 0 4px">ข้อที่ควรทบทวน (แตะเพื่อดู)</h3><div class="systems">` +
+        quiz.miss.map(id => `<button class="sys" type="button" data-miss="${id}">${byId[id].th}</button>`).join('') + '</div>' : '') +
+      `<div class="q-row" style="margin-top:10px"><button class="link" type="button" id="qclose">ปิด</button><button class="tool solid" type="button" id="qagain">ทำใหม่</button></div>`;
+    invalidate();
+  }
+
+  /* ---------- การเลือกด้วยการแตะ ---------- */
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  function pick(ev) {
+    const r = canvas.getBoundingClientRect();
+    ndc.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    const vm = meshes.filter(m => m.visible && m.userData.item.mat.opacity > 0.15);
+    const hit = ray.intersectObjects(vm, false)[0];
+    return hit ? hit.object.userData.item : null;
+  }
+  let down = null, hoverBusy = false;
+  canvas.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+  canvas.addEventListener('pointerup', e => {
+    if (!down) return;
+    const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y), dt = performance.now() - down.t; down = null;
+    if (moved > 6 || dt > 600) return;
+    const it = pick(e);
+    if (it) { if (quiz && quiz.target) return; select(it.id); }
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (e.pointerType === 'touch' || e.buttons || hoverBusy) return;
+    hoverBusy = true;
+    setTimeout(() => {
+      hoverBusy = false;
+      const it = quiz && quiz.target ? null : pick(e), r = stage.getBoundingClientRect();
+      const id = it ? it.id : null;
+      if (it) { tip.textContent = it.th; tip.style.left = (e.clientX - r.left) + 'px'; tip.style.top = (e.clientY - r.top) + 'px'; }
+      tip.classList.toggle('on', !!it);
+      if (id !== hover) { hover = id; canvas.style.cursor = id ? 'pointer' : ''; invalidate(); }
+    }, 50);
+  });
+  canvas.addEventListener('pointerleave', () => { tip.classList.remove('on'); if (hover) { hover = null; invalidate(); } });
+
+  /* ---------- ปุ่มต่าง ๆ ---------- */
+  $('bar').addEventListener('click', e => {
+    const c = e.target.closest('.chip'); if (!c) return;
+    vis[c.dataset.layer] = !vis[c.dataset.layer]; refresh();
+  });
+  peelBtn.addEventListener('click', peel);
+  $('xray').addEventListener('click', () => { xray = !xray; refresh(); });
+  $('isolate').addEventListener('click', () => { isolate = !isolate; refresh(); });
+  $('explode').addEventListener('click', () => {
+    exploded = !exploded; explodeTarget = exploded ? 1 : 0;
+    refresh(); region('whole');
+  });
+  $('reset').addEventListener('click', () => {
+    vis = Object.assign({}, INIT); xray = false; isolate = false; sysFilter = null; exploded = false; explodeTarget = 0;
+    qinput.value = ''; refresh(); renderList(); flyTo(new THREE.Vector3(0, midY, 0), fitDist(H), new THREE.Vector3(...DIRS.front));
+  });
+  $('views').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.dir) { const t = controls.target.clone(); flyTo(t, camera.position.distanceTo(t), new THREE.Vector3(...DIRS[b.dataset.dir])); }
+    if (b.dataset.reg) region(b.dataset.reg);
+  });
+  info.addEventListener('click', e => { if (e.target.id === 'focusbtn' && byId[sel]) focusItem(byId[sel]); });
+  list.addEventListener('click', e => { const b = e.target.closest('.item'); if (b) select(b.dataset.id, { reveal: true, focus: true }); });
+  qinput.addEventListener('input', renderList);
+  systemsEl.addEventListener('click', e => {
+    const b = e.target.closest('.sys'); if (!b) return;
+    sysFilter = b.dataset.s || null; refresh(); renderList();
+  });
+  $('quizbtn').addEventListener('click', () => { quiz ? closeQuiz() : startQuiz(); });
+  quizcard.addEventListener('click', e => {
+    const t = e.target;
+    const opt = t.closest('.q-opt');
+    if (opt && quiz) { if (!opt.disabled) answerQ(+opt.dataset.i); return; }
+    if (t.id === 'qnext') { quiz.i++; renderQ(); return; }
+    if (t.id === 'qagain') { startQuiz(); return; }
+    if (t.id === 'qclose') { closeQuiz(); return; }
+    const m = t.closest('[data-miss]'); if (m) { quiz.target = null; select(m.dataset.miss, { reveal: true, focus: true }); }
+  });
+
+  /* ---------- เริ่มต้น ---------- */
+  load().then(() => {
+    buildSystems(); renderList(); refresh(); showInfo(byId[sel]);
+    resize();
+    controls.target.set(0, midY, 0);
+    const d = fitDist(H);
+    camera.position.set(0, midY + 0.05, d); controls.update();
+    pulseUntil = performance.now() + 2600; invalidate();
+    window.__anat = { ready: true, items: items.length, select, region, peel };
+  }).catch(err => {
+    $('loadmsg').textContent = 'โหลดแบบจำลองไม่สำเร็จ ลองรีเฟรชหน้าอีกครั้ง'; $('loadbar').hidden = true; console.error(err);
+  });
+})();
+</script>
+</body></html>
